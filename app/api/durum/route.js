@@ -3,38 +3,59 @@ import { NextResponse } from 'next/server';
 
 const redis = Redis.fromEnv();
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const ara = searchParams.get('ara');
-
-  // IP Sorgu (Gerçek zamanlı OA kontrolü)
-  if (ara) {
-    const data = await redis.get(`last_seen_oa:${ara}`);
-    return NextResponse.json({ ip: ara, son_oa_giris: data || "OA üzerinde kaydı yok" });
-  }
-
-  // Verileri Topla
+export async function GET() {
   const totalReq = await redis.get('total_req_count') || 0;
-  
-  const oaTotal = await redis.get('oa_total_hits') || 0;
-  const oaUnique = await redis.scard('oa_unique_ips') || 0;
-  
-  const extTotal = await redis.get('ext_total_hits') || 0;
-  const extUnique = await redis.scard('ext_unique_ips') || 0;
-
-  const logs = await redis.lrange('global_logs', 0, 15) || [];
+  const realDevices = await redis.scard('oa_unique_devices') || 0; // %100 Doğru sayı
+  const totalIps = await redis.scard('oa_raw_ips') || 0;
+  const logs = await redis.lrange('global_logs', 0, 14) || [];
 
   const html = `
     <!DOCTYPE html>
     <html lang="tr">
     <head>
-      <meta charset="UTF-8"><title>Pulsar Analiz</title>
+      <meta charset="UTF-8"><title>Pulsar Kontrol Merkezi</title>
       <style>
-        body { background:#0a0a0a; color:#eee; font-family:sans-serif; padding:20px; }
-        .grid { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px; }
-        .card { background:#111; padding:15px; border-radius:10px; border:1px solid #333; }
-        .oa { border-top: 4px solid #00ffcc; }
-        .ext { border-top: 4px solid #ff4444; }
+        body { background:#0a0a0a; color:#fff; font-family:sans-serif; padding:20px; }
+        .card { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; text-align:center; }
+        .main-val { font-size:3.5rem; font-weight:bold; color:#00ffcc; display:block; }
+        .grid { display:grid; grid-template-columns: 1fr 1fr; gap:15px; }
+        .sub-card { background:#161616; padding:15px; border-radius:10px; border:1px solid #222; }
+        li { background:#111; padding:10px; border-radius:8px; margin-bottom:5px; border-left:4px solid #444; font-size:0.8rem; list-style:none; }
+        .tag-oa { color:#00ffcc; font-weight:bold; }
+      </style>
+    </head>
+    <body>
+      <div class="card" style="border-bottom: 5px solid #00ffcc;">
+        <span style="color:#888; letter-spacing:1px;">TOPLAM GERÇEK KULLANICI</span>
+        <span class="main-val">${realDevices}</span>
+        <p style="color:#555; font-size:0.8rem;">(Çerez bazlı takip sistemiyle %100 tekilleştirilmiş cihaz sayısı)</p>
+      </div>
+
+      <div class="grid">
+        <div class="sub-card">
+          <small>TOPLAM İSTEK</small><br><b>${totalReq}</b>
+        </div>
+        <div class="sub-card">
+          <small>FARKLI İP SAYISI</small><br><b>${totalIps}</b>
+        </div>
+      </div>
+
+      <h3 style="margin-top:30px; color:#888;">📜 Son Hareketler (Cihaz Kimlikli)</h3>
+      <ul>
+        ${logs.map(x => {
+          const i = JSON.parse(x);
+          return `<li>
+            <span class="tag-oa">${i.type}</span> | ID: <code>${i.id}</code> | IP: ${i.ip} | ${i.zaman.split(' ')[1]}
+            <br><small style="color:#444;">Dosya: ${i.resim}</small>
+          </li>`;
+        }).join('')}
+      </ul>
+    </body>
+    </html>
+  `;
+
+  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}        .ext { border-top: 4px solid #ff4444; }
         h2 { margin:0; font-size:1rem; color:#888; }
         .val { font-size:1.8rem; font-weight:bold; color:#fff; display:block; margin:5px 0; }
         input { padding:10px; background:#000; border:1px solid #444; color:#fff; border-radius:5px; }
