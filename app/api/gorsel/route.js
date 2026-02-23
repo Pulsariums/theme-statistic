@@ -13,25 +13,22 @@ export async function GET(request) {
     const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
     const referer = request.headers.get('referer') || '';
     
-    // Filtre: openanime.me veya beta.openanime.me içeriyor mu?
-    const isOpenAnime = referer.includes('openanime.me');
+    // DÜZELTME: openani.me (e harfi yok) olarak güncellendi
+    const isOpenAnime = referer.includes('openani.me');
     const suan = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
 
-    // 1. Her durumda Toplam İstek Sayısını Artır
+    // Toplam isteği her zaman artır
     await redis.incr('total_req_count');
 
     if (isOpenAnime) {
-      // --- OPENANIME TRAFİĞİ ---
-      await redis.incr('oa_total_hits'); // Toplam OA isteği
-      await redis.sadd('oa_unique_ips', ip); // Tekil OA kullanıcısı (SADD ile IP tekilleşir)
-      await redis.set(`last_seen_oa:${ip}`, suan); // Bu IP en son ne zaman OA'daydı?
+      await redis.incr('oa_total_hits');
+      await redis.sadd('oa_unique_ips', ip);
+      await redis.set(`last_seen_oa:${ip}`, suan);
     } else {
-      // --- DIŞ TRAFİK (Botlar, tarayıcıdan direkt girenler vs.) ---
       await redis.incr('ext_total_hits');
       await redis.sadd('ext_unique_ips', ip);
     }
 
-    // Ortak Log (Panelde görmek için - Son 20)
     const logType = isOpenAnime ? "✅ OpenAnime" : "❌ Dış İstek";
     const maskedIp = ip.split('.').slice(0, 2).join('.') + '.x.x';
     await redis.lpush('global_logs', JSON.stringify({ type: logType, ip: maskedIp, zaman: suan, resim: ad }));
@@ -39,5 +36,15 @@ export async function GET(request) {
 
   } catch (e) { console.error(e); }
 
-  return NextResponse.redirect(new URL(`/${ad}`, request.url), { status: 307 });
+  const gercekResimUrl = new URL(`/${ad}`, request.url);
+  
+  // ÖNEMLİ: Tarayıcının bu linki cachelemesini engelliyoruz (No-Store)
+  return NextResponse.redirect(gercekResimUrl, { 
+    status: 307,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
 }
