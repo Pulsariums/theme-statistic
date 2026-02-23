@@ -7,32 +7,28 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const resimAdi = searchParams.get('ad');
 
-  if (!resimAdi) return new NextResponse("Resim adı eksik", { status: 400 });
+  if (!resimAdi) {
+    return new NextResponse("Resim adi eksik", { status: 400 });
+  }
 
   try {
-    const forwarded = request.headers.get('x-forward-for');
+    const forwarded = request.headers.get('x-forwarded-for');
     const rawIp = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
-    
-    // Güvenlik için maskelenmiş IP (Log listesi için)
     const maskedIp = rawIp.split('.').slice(0, 2).join('.') + '.x.x';
     const zaman = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
 
-    // 1. Genel Sayaçları Artır
+    // Veritabanı işlemleri
     await redis.incr('toplam_gosterim');
     await redis.sadd('tekil_ips', rawIp); 
-
-    // 2. IP Bazlı Son Görülme (Sorgu için gerçek IP)
     await redis.set(`last_seen_ip:${rawIp}`, zaman);
     
-    // 3. Aktivite Logu (Maskeli IP ile)
+    // Log listesi
     await redis.lpush('aktivite_logu', JSON.stringify({ ip: maskedIp, zaman, resim: resimAdi }));
     await redis.ltrim('aktivite_logu', 0, 29);
-
   } catch (err) {
-    console.error("Takip hatası:", err);
+    console.error("Takip hatasi:", err);
   }
 
   const gercekResimUrl = new URL(`/${resimAdi}`, request.url);
   return NextResponse.redirect(gercekResimUrl, { status: 307 });
-}  return NextResponse.redirect(gercekResimUrl, { status: 307 });
 }
