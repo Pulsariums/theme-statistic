@@ -6,38 +6,33 @@ const redis = Redis.fromEnv();
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const resimAdi = searchParams.get('ad');
-  const user = searchParams.get('user') || 'Anonim';
 
-  if (!resimAdi) return new NextResponse("Resim adi eksik", { status: 400 });
+  if (!resimAdi) return new NextResponse("Resim adı eksik", { status: 400 });
 
   try {
-    // IP Adresini al ve maskele (Gizlilik için)
+    // Gerçek IP adresini al
     const forwarded = request.headers.get('x-forwarded-for');
-    const rawIp = forwarded ? forwarded.split(',')[0] : '127.0.0.1';
-    const maskedIp = rawIp.split('.').slice(0, 2).join('.') + '.x.x';
+    const rawIp = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
     
+    // Güvenlik için maskelenmiş IP (Log listesi için)
+    const maskedIp = rawIp.split('.').slice(0, 2).join('.') + '.x.x';
     const zaman = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
 
-    // Veritabanı işlemleri
+    // 1. Genel Sayaçları Artır
     await redis.incr('toplam_gosterim');
     await redis.sadd('tekil_ips', rawIp); 
-    await redis.set(`son_gorulme:${user}`, zaman);
+
+    // 2. IP Bazlı Son Görülme Kaydet (Sorgulanacak veri bu)
+    await redis.set(`last_seen_ip:${rawIp}`, zaman);
     
-    // Aktivite akışı (Son 50 işlem)
-    await redis.lpush('aktivite_logu', { user, zaman, resim: resimAdi, ip: maskedIp });
-    await redis.ltrim('aktivite_logu', 0, 49);
+    // 3. Aktivite Loguna Ekle (Maskeli IP ile)
+    await redis.lpush('aktivite_logu', { ip: maskedIp, zaman, resim: resimAdi });
+    await redis.ltrim('aktivite_logu', 0, 29); // Son 30 kayıt
 
   } catch (err) {
     console.error("Takip hatası:", err);
   }
 
-  // Resmi GitHub public klasöründen çekip yönlendir
   const gercekResimUrl = new URL(`/${resimAdi}`, request.url);
   return NextResponse.redirect(gercekResimUrl, { status: 307 });
-}  return NextResponse.redirect(gercekResimUrl, {
-    status: 307,
-    headers: {
-      'Cache-Control': 'no-store, no-cache, must-revalidate' // Her girişi tekrar saysın diye
-    }
-  });
 }
