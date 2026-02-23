@@ -1,10 +1,10 @@
 import { Redis } from '@upstash/redis';
-import { NextResponse } from 'next/server';
 
-const redis = Redis.fromEnv();
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const redis = Redis.fromEnv();
     const total = await redis.get('total_hits') || 0;
     const users = await redis.scard('oa_users') || 0;
     const ips = await redis.scard('oa_ips') || 0;
@@ -13,28 +13,31 @@ export async function GET() {
     let listItems = "";
     rawLogs.forEach(l => {
       const i = typeof l === 'string' ? JSON.parse(l) : l;
-      const cls = i.t === "OA" ? "color:#00ffcc;border-left:3px solid #00ffcc;" : "color:#ff4444;border-left:3px solid #ff4444;";
-      listItems += `<li style="background:#111;padding:10px;margin-bottom:5px;border-radius:5px;font-size:0.8rem;list-style:none;${cls}"><b>[${i.t}]</b> ${i.ip} - ${i.z} <br><small style="color:#666">Görsel: ${i.img}</small></li>`;
+      const color = i.t === "OA" ? "#00ffcc" : "#ff4444";
+      listItems += "<li style='background:#111;padding:10px;margin-bottom:5px;border-radius:5px;border-left:3px solid " + color + ";font-size:0.8rem;list-style:none;'><b>[" + i.t + "]</b> " + i.ip + " - " + i.z + "<br><small style='color:#666'>Gorsel: " + i.img + "</small></li>";
     });
 
-    const body = `
-      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Panel</title>
-      <style>body{background:#000;color:#fff;font-family:sans-serif;padding:20px;}.card{background:#111;padding:20px;border-radius:10px;border:1px solid #333;margin-bottom:20px;}.val{font-size:2rem;color:#00ffcc;font-weight:bold;}</style>
-      </head><body>
-      <h1>📊 İstatistikler</h1>
-      <div class="card">
-        <div>Kullanıcı (Tekil): <span class="val">${users}</span></div>
-        <small>IP Sayısı: ${ips} | Toplam İstek: ${total}</small>
-      </div>
-      <h3>Son Hareketler</h3>
-      <ul style="padding:0;">${listItems}</ul>
-      </body></html>
-    `;
+    const html = "<!DOCTYPE html>" +
+      "<html><head><meta charset='UTF-8'><title>Panel</title>" +
+      "<style>body{background:#000;color:#fff;font-family:sans-serif;padding:20px;}.card{background:#111;padding:20px;border-radius:10px;border:1px solid #333;margin-bottom:20px;}.val{font-size:2rem;color:#00ffcc;font-weight:bold;}</style>" +
+      "</head><body>" +
+      "<h1>Panel</h1>" +
+      "<div class='card'>" +
+      "<div>Gercek Kullanici: <span class='val'>" + users + "</span></div>" +
+      "<small>Farkli IP: " + ips + " | Toplam Istek: " + total + "</small>" +
+      "</div>" +
+      "<h3>Son Hareketler</h3>" +
+      "<ul style='padding:0;'>" + listItems + "</ul>" +
+      "</body></html>";
 
-    return new NextResponse(body, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      status: 200
+    });
   } catch (err) {
-    return NextResponse.json({ error: err.message });
+    return new Response("Hata olustu: " + err.message, { status: 500 });
   }
+}  }
 }      <body>
         <h1>📊 İstatistikler</h1>
         <div class="card">
