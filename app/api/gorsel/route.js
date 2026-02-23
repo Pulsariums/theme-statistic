@@ -1,40 +1,40 @@
 import { Redis } from '@upstash/redis';
 import { NextResponse } from 'next/server';
 
-// Veritabanına bağlan
 const redis = Redis.fromEnv();
 
 export async function GET(request) {
-  // 1. Linkten resim adını al (Örn: ?ad=bg.jpg)
   const { searchParams } = new URL(request.url);
   const resimAdi = searchParams.get('ad');
+  const user = searchParams.get('user') || 'Anonim';
 
-  if (!resimAdi) {
-    return new NextResponse("Hata: Resim adi yazmadın! (?ad=arkaplan.png gibi ekle)", { status: 400 });
-  }
+  if (!resimAdi) return new NextResponse("Resim adi eksik", { status: 400 });
 
-  // 2. Ziyaretçiyi Say ve Kaydet
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'bilinmeyen-ip';
+    // IP Adresini al ve maskele (Gizlilik için)
+    const forwarded = request.headers.get('x-forwarded-for');
+    const rawIp = forwarded ? forwarded.split(',')[0] : '127.0.0.1';
+    const maskedIp = rawIp.split('.').slice(0, 2).join('.') + '.x.x';
     
-    await redis.incr('toplam_gosterim'); // Toplam kaç kere tetiklendi
-    await redis.hincrby('hangi_resim_kac_kere', resimAdi, 1); // Bu resim kaç kere açıldı
-    await redis.sadd('tekil_kisi_sayisi', ip); // Benzersiz kişi sayısı
+    const zaman = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
+
+    // Veritabanı işlemleri
+    await redis.incr('toplam_gosterim');
+    await redis.sadd('tekil_ips', rawIp); 
+    await redis.set(`son_gorulme:${user}`, zaman);
     
-    // Son gireni not al
-    await redis.set('son_olay', JSON.stringify({
-      zaman: new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' }),
-      ip: ip,
-      resim: resimAdi
-    }));
+    // Aktivite akışı (Son 50 işlem)
+    await redis.lpush('aktivite_logu', { user, zaman, resim: resimAdi, ip: maskedIp });
+    await redis.ltrim('aktivite_logu', 0, 49);
+
   } catch (err) {
-    console.error("Sayım hatası:", err);
+    console.error("Takip hatası:", err);
   }
 
-  // 3. Tarayıcıyı çaktırmadan "public" klasöründeki gerçek resme yönlendir!
-  // Bu sayede dosya okuma, bozuk resim vs. derdi olmaz.
+  // Resmi GitHub public klasöründen çekip yönlendir
   const gercekResimUrl = new URL(`/${resimAdi}`, request.url);
-  return NextResponse.redirect(gercekResimUrl, {
+  return NextResponse.redirect(gercekResimUrl, { status: 307 });
+}  return NextResponse.redirect(gercekResimUrl, {
     status: 307,
     headers: {
       'Cache-Control': 'no-store, no-cache, must-revalidate' // Her girişi tekrar saysın diye
