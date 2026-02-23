@@ -4,37 +4,48 @@ import { NextResponse } from 'next/server';
 const redis = Redis.fromEnv();
 
 export async function GET() {
-  const totalReq = await redis.get('total_req_count') || 0;
-  const realDevices = await redis.scard('oa_unique_devices') || 0; // %100 Doğru sayı
-  const totalIps = await redis.scard('oa_raw_ips') || 0;
-  const logs = await redis.lrange('global_logs', 0, 14) || [];
+  try {
+    const total = await redis.get('total_hits') || 0;
+    const users = await redis.scard('oa_users') || 0;
+    const ips = await redis.scard('oa_ips') || 0;
+    const rawLogs = await redis.lrange('logs', 0, 15) || [];
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="tr">
-    <head>
-      <meta charset="UTF-8"><title>Pulsar Kontrol Merkezi</title>
-      <style>
-        body { background:#0a0a0a; color:#fff; font-family:sans-serif; padding:20px; }
-        .card { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; text-align:center; }
-        .main-val { font-size:3.5rem; font-weight:bold; color:#00ffcc; display:block; }
-        .grid { display:grid; grid-template-columns: 1fr 1fr; gap:15px; }
-        .sub-card { background:#161616; padding:15px; border-radius:10px; border:1px solid #222; }
-        li { background:#111; padding:10px; border-radius:8px; margin-bottom:5px; border-left:4px solid #444; font-size:0.8rem; list-style:none; }
-        .tag-oa { color:#00ffcc; font-weight:bold; }
-      </style>
-    </head>
-    <body>
-      <div class="card" style="border-bottom: 5px solid #00ffcc;">
-        <span style="color:#888; letter-spacing:1px;">TOPLAM GERÇEK KULLANICI</span>
-        <span class="main-val">${realDevices}</span>
-        <p style="color:#555; font-size:0.8rem;">(Çerez bazlı takip sistemiyle %100 tekilleştirilmiş cihaz sayısı)</p>
-      </div>
+    const logItems = rawLogs.map(l => {
+      const item = typeof l === 'string' ? JSON.parse(l) : l;
+      return `<li><b>[${item.t}]</b> ${item.ip} - ${item.z} <br><small>Görsel: ${item.img}</small></li>`;
+    }).join('');
 
-      <div class="grid">
-        <div class="sub-card">
-          <small>TOPLAM İSTEK</small><br><b>${totalReq}</b>
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Analiz</title>
+        <style>
+          body { background:#0a0a0a; color:#fff; font-family:sans-serif; padding:20px; }
+          .card { background:#111; padding:20px; border-radius:12px; border:1px solid #333; margin-bottom:15px; }
+          .val { font-size:2rem; font-weight:bold; color:#00ffcc; }
+          ul { padding:0; list-style:none; }
+          li { background:#161616; padding:10px; margin-bottom:5px; border-radius:5px; border-left:3px solid #00ffcc; font-size:0.8rem; }
+        </style>
+      </head>
+      <body>
+        <h1>📊 Tema İstatistikleri</h1>
+        <div class="card">
+          <div>GERÇEK KİŞİ: <span class="val">${users}</span></div>
+          <small>Toplam İstek: ${total} | Farklı IP: ${ips}</small>
         </div>
+        <h3>📜 Son Hareketler</h3>
+        <ul>${logItems}</ul>
+      </body>
+      </html>
+    `;
+
+    return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}        </div>
         <div class="sub-card">
           <small>FARKLI İP SAYISI</small><br><b>${totalIps}</b>
         </div>
