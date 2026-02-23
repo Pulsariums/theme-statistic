@@ -5,36 +5,66 @@ const redis = Redis.fromEnv();
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const sorguIp = searchParams.get('ara');
+  const ara = searchParams.get('ara');
 
-  // 1. IP Sorgu Sonuclari
-  if (sorguIp) {
-    const sonGiris = await redis.get(`last_seen_ip:${sorguIp}`);
-    return NextResponse.json({
-      ip: sorguIp,
-      son_aktivite: sonGiris || "Giris bulunamadi"
-    });
+  if (ara) {
+    const data = await redis.get(`last_seen_ip:${ara}`);
+    return NextResponse.json({ ip: ara, son: data || "Kayit yok" });
   }
 
-  // 2. Verileri Çek
   const toplam = await redis.get('toplam_gosterim') || 0;
   const tekil = await redis.scard('tekil_ips') || 0;
-  const rawLoglar = await redis.lrange('aktivite_logu', 0, 19) || []; 
+  const loglar = await redis.lrange('aktivite_logu', 0, 15) || [];
 
-  // 3. HTML Sayfası
   const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="tr">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Panel</title>
+      <title>Pulsar Panel</title>
       <style>
-        body { font-family: sans-serif; background: #0a0a0a; color: #fff; padding: 20px; }
-        .card { background: #151515; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
-        .stats { display: flex; gap: 20px; }
-        .stats div { flex: 1; background: #222; padding: 15px; border-radius: 8px; text-align: center; }
-        input { width: 60%; padding: 12px; border-radius: 5px; border: 1px solid #444; background: #000; color: #fff; }
+        body { background:#0a0a0a; color:#fff; font-family:sans-serif; padding:20px; }
+        .box { background:#111; padding:15px; border-radius:10px; border:1px solid #333; margin-bottom:20px; }
+        h2 { color:#00e5ff; margin:0 0 10px 0; }
+        input { padding:10px; border-radius:5px; border:1px solid #444; background:#000; color:#fff; width:200px; }
+        button { padding:10px; background:#00e5ff; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
+        li { background:#161616; padding:10px; margin-bottom:5px; border-radius:5px; list-style:none; border-left:3px solid #00e5ff; }
+        small { color:#666; }
+      </style>
+    </head>
+    <body>
+      <h1>🚀 Takip Sistemi</h1>
+      <div class="box" style="display:flex; gap:20px; text-align:center;">
+        <div style="flex:1;"><b>${toplam}</b><br>Toplam</div>
+        <div style="flex:1;"><b>${tekil}</b><br>Tekil Kişi</div>
+      </div>
+      <div class="box">
+        <h3>IP Sorgula</h3>
+        <input type="text" id="ip" placeholder="Tam IP adresi...">
+        <button onclick="sorgula()">Sorgula</button>
+        <div id="res" style="margin-top:10px; font-weight:bold; color:#00e5ff;"></div>
+      </div>
+      <h3>Son Hareketler</h3>
+      <ul>
+        ${loglar.map(x => {
+          const item = typeof x === 'string' ? JSON.parse(x) : x;
+          return `<li>${item.ip} - ${item.zaman}<br><small>Dosya: ${item.resim}</small></li>`;
+        }).join('')}
+      </ul>
+      <script>
+        async function sorgula(){
+          const v = document.getElementById('ip').value;
+          const r = await fetch('/api/durum?ara='+v);
+          const d = await r.json();
+          document.getElementById('res').innerText = "Son Gorulme: " + d.son;
+        }
+      </script>
+    </body>
+    </html>
+  `;
+
+  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}        input { width: 60%; padding: 12px; border-radius: 5px; border: 1px solid #444; background: #000; color: #fff; }
         button { padding: 12px 20px; border-radius: 5px; border: none; background: #00e5ff; font-weight: bold; cursor: pointer; }
         ul { list-style: none; padding: 0; }
         li { background: #1a1a1a; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #00e5ff; }
