@@ -13,28 +13,39 @@ export async function GET(request) {
     const ua = headers.get('user-agent') || 'unknown';
     const lang = headers.get('accept-language') || 'unknown';
     const ip = headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
-    
-    // 1. GİZLİ PARMAK İZİ OLUŞTUR (Çerez çalışmazsa yedek bu)
-    // IP'nin ilk iki bloğu + Cihaz modeli + Dil
-    const fingerprint = `fp-${ua}-${lang}-${ip.split('.').slice(0, 2).join('.')}`;
-    
-    // 2. ÇEREZ KONTROLÜ
-    let deviceId = request.cookies.get('device_id')?.value;
-    
-    // 3. KESİN KİMLİK BELİRLEME
-    // Eğer çerez varsa onu kullan, yoksa parmak izini kullan
-    const finalIdentity = deviceId || fingerprint;
+    const referer = headers.get('referer') || '';
 
-    const isOpenAnime = (headers.get('referer') || '').includes('openani.me');
+    const fp = `fp-${ua.substring(0, 15)}-${lang.substring(0, 5)}-${ip.split('.').slice(0, 2).join('.')}`;
+    let deviceId = request.cookies.get('device_id')?.value;
+    const finalId = deviceId || fp;
+
+    const isOpenAnime = referer.includes('openani.me');
     const suan = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
 
+    await redis.incr('total_hits');
+
     if (isOpenAnime) {
-      // Redis'e 'tekil_cihazlar' kümesine ekle (Aynı parmak izi gelirse saymaz)
-      await redis.sadd('oa_unique_identities', finalIdentity);
-      await redis.sadd('oa_raw_ips', ip);
-      await redis.set(`last_seen_id:${finalIdentity}`, suan);
-      await redis.incr('oa_total_hits');
+      await redis.sadd('oa_users', finalId);
+      await redis.sadd('oa_ips', ip);
+      await redis.set(`seen:${finalId}`, suan);
     }
+
+    const maskedIp = ip.split('.').slice(0, 2).join('.') + '.x.x';
+    const logData = { t: isOpenAnime ? "OA" : "EXT", id: finalId.substring(0, 10), ip: maskedIp, z: suan, img: ad };
+    await redis.lpush('logs', JSON.stringify(logData));
+    await redis.ltrim('logs', 0, 19);
+
+    const resUrl = new URL(`/${ad}`, request.url);
+    const response = NextResponse.redirect(resUrl, { status: 307 });
+
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.cookies.set('device_id', finalId, { maxAge: 31536000, path: '/', sameSite: 'none', secure: true });
+
+    return response;
+  } catch (e) {
+    return NextResponse.redirect(new URL(`/${ad}`, request.url), { status: 307 });
+  }
+}    }
 
     // Log (Panelde göreceğin kısım)
     const maskedIp = ip.split('.').slice(0, 2).join('.') + '.x.x';
