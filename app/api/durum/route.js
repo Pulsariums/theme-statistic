@@ -13,6 +13,7 @@ export async function GET() {
     Toplam_Tekil_Kullanici: tekil || 0,
     Toplam_Gosterim_Sayisi: toplam || 0,
     Resimlere_Gore_Detay: detaylar || {},
-    Son_Gelen: son_olay ? JSON.parse(son_olay) : "Henüz kimse gelmedi"
+    // BURAYI DÜZELTTİK: Artık JSON.parse() kullanmıyoruz çünkü Upstash bunu kendisi yapıyor.
+    Son_Gelen: son_olay || "Henüz kimse gelmedi"
   });
 }
