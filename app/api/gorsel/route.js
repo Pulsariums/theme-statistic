@@ -10,8 +10,7 @@ export async function GET(request) {
   if (!resimAdi) return new NextResponse("Resim adı eksik", { status: 400 });
 
   try {
-    // Gerçek IP adresini al
-    const forwarded = request.headers.get('x-forwarded-for');
+    const forwarded = request.headers.get('x-forward-for');
     const rawIp = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
     
     // Güvenlik için maskelenmiş IP (Log listesi için)
@@ -22,12 +21,12 @@ export async function GET(request) {
     await redis.incr('toplam_gosterim');
     await redis.sadd('tekil_ips', rawIp); 
 
-    // 2. IP Bazlı Son Görülme Kaydet (Sorgulanacak veri bu)
+    // 2. IP Bazlı Son Görülme (Sorgu için gerçek IP)
     await redis.set(`last_seen_ip:${rawIp}`, zaman);
     
-    // 3. Aktivite Loguna Ekle (Maskeli IP ile)
-    await redis.lpush('aktivite_logu', { ip: maskedIp, zaman, resim: resimAdi });
-    await redis.ltrim('aktivite_logu', 0, 29); // Son 30 kayıt
+    // 3. Aktivite Logu (Maskeli IP ile)
+    await redis.lpush('aktivite_logu', JSON.stringify({ ip: maskedIp, zaman, resim: resimAdi }));
+    await redis.ltrim('aktivite_logu', 0, 29);
 
   } catch (err) {
     console.error("Takip hatası:", err);
@@ -35,4 +34,5 @@ export async function GET(request) {
 
   const gercekResimUrl = new URL(`/${resimAdi}`, request.url);
   return NextResponse.redirect(gercekResimUrl, { status: 307 });
+}  return NextResponse.redirect(gercekResimUrl, { status: 307 });
 }
