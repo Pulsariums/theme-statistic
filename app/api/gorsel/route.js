@@ -3,38 +3,42 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req) {
-  const { searchParams } = new URL(req.url);
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
   const ad = searchParams.get('ad');
-  
-  if (!ad) {
-    return new Response("Dosya adi eksik", { status: 400 });
-  }
 
-  const resUrl = new URL("/" + ad, req.url);
+  if (!ad) {
+    return new NextResponse("Dosya adi eksik", { status: 400 });
+  }
 
   try {
     const redis = Redis.fromEnv();
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
-    const ua = req.headers.get('user-agent') || 'unknown';
-    const referer = req.headers.get('referer') || '';
-    const isOpenAnime = referer.includes('openani.me');
-    const suan = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });
+    const headers = request.headers;
+    const ip = headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    const ua = headers.get('user-agent') || 'unknown';
+    
+    // Basit Parmak İzi (Cihaz + İP başı)
+    const fp = `fp-${ua.substring(0, 10)}-${ip.substring(0, 5)}`;
+    let deviceId = request.cookies.get('device_id')?.value || fp;
 
-    const fp = "fp-" + ua.substring(0, 10) + "-" + ip.split('.').slice(0, 2).join('.');
-    const deviceId = req.cookies.get('device_id')?.value || fp;
-
-    await redis.incr('total_hits');
-
-    if (isOpenAnime) {
-      await redis.sadd('oa_users', deviceId);
-      await redis.sadd('oa_ips', ip);
+    const referer = headers.get('referer') || '';
+    if (referer.includes('openani.me')) {
+      await redis.incr('oa_total_hits');
+      await redis.sadd('oa_users', deviceId); // Gerçek Cihaz Sayısı
+      await redis.sadd('oa_ips', ip); // Farklı IP Sayısı
     }
 
-    const maskedIp = ip.split('.').slice(0, 2).join('.') + '.x.x';
-    const logData = { t: isOpenAnime ? "OA" : "EXT", ip: maskedIp, z: suan, img: ad };
-    await redis.lpush('logs', JSON.stringify(logData));
-    await redis.ltrim('logs', 0, 19);
+    const resUrl = new URL(`/${ad}`, request.url);
+    const response = NextResponse.redirect(resUrl, { status: 307 });
+    
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.cookies.set('device_id', deviceId, { maxAge: 31536000, path: '/', sameSite: 'none', secure: true });
+    
+    return response;
+  } catch (e) {
+    return NextResponse.redirect(new URL(`/${ad}`, request.url), { status: 307 });
+  }
+}    await redis.ltrim('logs', 0, 19);
 
     const response = NextResponse.redirect(resUrl);
     response.headers.set('Cache-Control', 'no-store, max-age=0');
