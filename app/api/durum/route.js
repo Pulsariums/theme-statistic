@@ -10,9 +10,14 @@ export async function GET() {
     const ips = await redis.scard('oa_ips') || 0;
     const rawLogs = await redis.lrange('logs', 0, 15) || [];
 
+    // Logları liste haline getir
     const logItems = rawLogs.map(l => {
-      const item = typeof l === 'string' ? JSON.parse(l) : l;
-      return `<li><b>[${item.t}]</b> ${item.ip} - ${item.z} <br><small>Görsel: ${item.img}</small></li>`;
+      const i = typeof l === 'string' ? JSON.parse(l) : l;
+      const color = i.t === "OA" ? "#00ffcc" : "#ff4444";
+      return `<li style="background:#111; padding:10px; margin-bottom:5px; border-radius:5px; border-left:3px solid ${color}; font-size:0.8rem; list-style:none;">
+        <b style="color:${color}">[${i.t}]</b> ${i.ip} - ${i.z} <br>
+        <small style="color:#666">Cihaz: ${i.id} | Görsel: ${i.img}</small>
+      </li>`;
     }).join('');
 
     const html = `
@@ -20,21 +25,36 @@ export async function GET() {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Analiz</title>
+        <title>Pulsar Analiz</title>
         <style>
-          body { background:#0a0a0a; color:#fff; font-family:sans-serif; padding:20px; }
-          .card { background:#111; padding:20px; border-radius:12px; border:1px solid #333; margin-bottom:15px; }
-          .val { font-size:2rem; font-weight:bold; color:#00ffcc; }
-          ul { padding:0; list-style:none; }
-          li { background:#161616; padding:10px; margin-bottom:5px; border-radius:5px; border-left:3px solid #00ffcc; font-size:0.8rem; }
+          body { background:#0a0a0a; color:#eee; font-family:sans-serif; padding:20px; }
+          .card { background:#111; padding:20px; border-radius:12px; border:1px solid #333; margin-bottom:15px; text-align:center; }
+          .val { font-size:2.5rem; font-weight:bold; color:#00ffcc; display:block; }
+          .grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+          .sub { background:#161616; padding:15px; border-radius:10px; }
         </style>
       </head>
       <body>
-        <h1>📊 Tema İstatistikleri</h1>
+        <h1>📊 İstatistikler</h1>
         <div class="card">
-          <div>GERÇEK KİŞİ: <span class="val">${users}</span></div>
-          <small>Toplam İstek: ${total} | Farklı IP: ${ips}</small>
+          <small>GERÇEK KULLANICI (TEKİL)</small>
+          <span class="val">${users}</span>
         </div>
+        <div class="grid">
+          <div class="sub">İstek: <b>${total}</b></div>
+          <div class="sub">IP: <b>${ips}</b></div>
+        </div>
+        <h3>📜 Son Hareketler</h3>
+        <ul style="padding:0;">${logItems}</ul>
+      </body>
+      </html>
+    `;
+
+    return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}        </div>
         <h3>📜 Son Hareketler</h3>
         <ul>${logItems}</ul>
       </body>
