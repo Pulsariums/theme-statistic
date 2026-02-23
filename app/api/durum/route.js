@@ -10,31 +10,32 @@ export async function GET() {
     const ips = await redis.scard('oa_ips') || 0;
     const rawLogs = await redis.lrange('logs', 0, 15) || [];
 
-    // Logları liste haline getir
-    const logItems = rawLogs.map(l => {
+    let listItems = "";
+    rawLogs.forEach(l => {
       const i = typeof l === 'string' ? JSON.parse(l) : l;
-      const color = i.t === "OA" ? "#00ffcc" : "#ff4444";
-      return `<li style="background:#111; padding:10px; margin-bottom:5px; border-radius:5px; border-left:3px solid ${color}; font-size:0.8rem; list-style:none;">
-        <b style="color:${color}">[${i.t}]</b> ${i.ip} - ${i.z} <br>
-        <small style="color:#666">Cihaz: ${i.id} | Görsel: ${i.img}</small>
-      </li>`;
-    }).join('');
+      const cls = i.t === "OA" ? "color:#00ffcc;border-left:3px solid #00ffcc;" : "color:#ff4444;border-left:3px solid #ff4444;";
+      listItems += `<li style="background:#111;padding:10px;margin-bottom:5px;border-radius:5px;font-size:0.8rem;list-style:none;${cls}"><b>[${i.t}]</b> ${i.ip} - ${i.z} <br><small style="color:#666">Görsel: ${i.img}</small></li>`;
+    });
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Pulsar Analiz</title>
-        <style>
-          body { background:#0a0a0a; color:#eee; font-family:sans-serif; padding:20px; }
-          .card { background:#111; padding:20px; border-radius:12px; border:1px solid #333; margin-bottom:15px; text-align:center; }
-          .val { font-size:2.5rem; font-weight:bold; color:#00ffcc; display:block; }
-          .grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-          .sub { background:#161616; padding:15px; border-radius:10px; }
-        </style>
-      </head>
-      <body>
+    const body = `
+      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Panel</title>
+      <style>body{background:#000;color:#fff;font-family:sans-serif;padding:20px;}.card{background:#111;padding:20px;border-radius:10px;border:1px solid #333;margin-bottom:20px;}.val{font-size:2rem;color:#00ffcc;font-weight:bold;}</style>
+      </head><body>
+      <h1>📊 İstatistikler</h1>
+      <div class="card">
+        <div>Kullanıcı (Tekil): <span class="val">${users}</span></div>
+        <small>IP Sayısı: ${ips} | Toplam İstek: ${total}</small>
+      </div>
+      <h3>Son Hareketler</h3>
+      <ul style="padding:0;">${listItems}</ul>
+      </body></html>
+    `;
+
+    return new NextResponse(body, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  } catch (err) {
+    return NextResponse.json({ error: err.message });
+  }
+}      <body>
         <h1>📊 İstatistikler</h1>
         <div class="card">
           <small>GERÇEK KULLANICI (TEKİL)</small>
