@@ -139,6 +139,14 @@ export async function initDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS hidden_gallery_images (
+      id SERIAL PRIMARY KEY,
+      image_path TEXT UNIQUE NOT NULL,
+      hidden_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
   await ensureAdminUser();
 }
 
@@ -467,6 +475,19 @@ export async function createThemeVersion(themeId: number, versionName: string, c
     [themeId, versionName, css_code]
   );
   return rows[0];
+}
+
+export async function getHiddenGalleryAssetPaths() {
+  const rows = await query<{ image_path: string }>(`SELECT image_path FROM hidden_gallery_images`);
+  return rows.map((row) => row.image_path);
+}
+
+export async function hideGalleryAsset(imagePath: string) {
+  const rows = await query<{ image_path: string }>(
+    `INSERT INTO hidden_gallery_images (image_path) VALUES ($1) ON CONFLICT (image_path) DO NOTHING RETURNING image_path`,
+    [imagePath]
+  );
+  return rows[0] ?? null;
 }
 
 export async function updateThemeDetails(id: number, data: {

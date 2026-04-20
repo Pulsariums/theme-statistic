@@ -1,8 +1,14 @@
+import { cookies } from "next/headers";
 import GalleryBrowser from "@/app/components/gallery-browser";
+import { getCurrentUser } from "@/lib/auth";
 import { getGalleryAssets } from "@/lib/gallery";
 
 export default async function GalleryPage() {
   const assets = await getGalleryAssets();
+  const cookiesStore = await cookies();
+  const cookieValue = cookiesStore.get("pulsar_session")?.value ?? null;
+  const currentUser = await getCurrentUser(cookieValue);
+  const isAdmin = currentUser?.role === "admin";
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--text)]">
@@ -18,7 +24,7 @@ export default async function GalleryPage() {
         </section>
 
         <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[0_32px_80px_rgba(15,23,42,0.16)]">
-          <GalleryBrowser initialAssets={assets} />
+          <GalleryBrowser initialAssets={assets} isAdmin={isAdmin} />
         </section>
       </div>
     </main>

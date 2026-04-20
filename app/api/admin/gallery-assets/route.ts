@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { getCurrentUser } from "@/lib/auth";
-import { initDatabase } from "@/lib/db";
+import { initDatabase, hideGalleryAsset } from "@/lib/db";
 
 const validExtensions = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"];
 const galleryRoot = path.join(process.cwd(), "public", "images");
@@ -12,6 +12,35 @@ async function ensureDb() {
     await initDatabase();
   } catch (error) {
     console.error("Database initialization failed", error);
+  }
+}
+
+export async function DELETE(request: Request) {
+  await ensureDb();
+  const user = await getCurrentUser(request as any);
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 403 });
+  }
+
+  const url = new URL(request.url);
+  const category = String(url.searchParams.get("category") || "").trim();
+  const fileName = String(url.searchParams.get("fileName") || "").trim();
+  if (!category || !fileName) {
+    return NextResponse.json({ error: "Kategori ve dosya adı gereklidir." }, { status: 400 });
+  }
+
+  const imagePath = path.posix.join("images", category, fileName);
+
+  try {
+    const hidden = await hideGalleryAsset(imagePath);
+    if (!hidden) {
+      return NextResponse.json({ error: "Görsel bulunamadı veya zaten gizlenmiş." }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, imagePath });
+  } catch (error) {
+    console.error("Gallery asset delete failed", error);
+    return NextResponse.json({ error: "Görsel gizlenemedi." }, { status: 500 });
   }
 }
 

@@ -6,6 +6,7 @@ import {
   getGalleryAssetUsage,
   recordImageDownload,
   recordImageView,
+  getHiddenGalleryAssetPaths,
 } from "@/lib/db";
 
 export type GalleryAsset = {
@@ -60,16 +61,23 @@ export async function getGalleryAssets(): Promise<GalleryAsset[]> {
     return assets;
   }
 
+  const hiddenPaths = await getHiddenGalleryAssetPaths();
+  const hiddenSet = new Set(hiddenPaths);
+  const visibleAssets = assets.filter((asset) => !hiddenSet.has(asset.imagePath));
+  if (visibleAssets.length === 0) {
+    return visibleAssets;
+  }
+
   let summary = [] as Array<{ image_path: string; views: number; downloads: number }>;
   try {
-    summary = await getImageUsageSummary(assets.map((asset) => asset.imagePath));
+    summary = await getImageUsageSummary(visibleAssets.map((asset) => asset.imagePath));
   } catch {
     summary = [];
   }
 
   const summaryMap = new Map(summary.map((item) => [item.image_path, item]));
 
-  return assets.map((asset) => {
+  return visibleAssets.map((asset) => {
     const usage = summaryMap.get(asset.imagePath);
     return {
       ...asset,
@@ -98,6 +106,11 @@ export async function getGalleryAsset(category: string, fileName: string): Promi
     usage = await getGalleryAssetUsage(imagePath);
   } catch {
     usage = null;
+  }
+
+  const hiddenPaths = await getHiddenGalleryAssetPaths();
+  if (hiddenPaths.includes(imagePath)) {
+    return null;
   }
 
   return {

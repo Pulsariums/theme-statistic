@@ -84,6 +84,7 @@ export default function MyThemeEditor({ theme, versions }: Props) {
         tags,
         thumbnailUrl,
         status,
+        cssCode,
       }),
     });
 

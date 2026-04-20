@@ -45,7 +45,7 @@ export default async function AdminThemeEditPage({ params }: { params: { id: str
             </Link>
           </div>
         </div>
-        <MyThemeEditor theme={theme} versions={[]} />
+        <MyThemeEditor theme={theme} versions={versions} />
       </div>
     </main>
   );

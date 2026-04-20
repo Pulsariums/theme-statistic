@@ -16,6 +16,19 @@ type GalleryAsset = {
 
 const defaultThumbnail = "https://via.placeholder.com/640x360?text=Pulsar+Theme";
 
+function encodeSvgDataUrl(svg: string) {
+  return `data:image/svg+xml;base64,${window.btoa(unescape(encodeURIComponent(svg)))}`;
+}
+
+function createPatternDataUrl(background: string, foreground: string, variant: number) {
+  const svg = variant === 1
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="${background}"/><circle cx="50" cy="50" r="30" fill="${foreground}" opacity="0.7"/><circle cx="150" cy="150" r="30" fill="${foreground}" opacity="0.7"/><circle cx="110" cy="70" r="20" fill="${foreground}" opacity="0.5"/></svg>`
+    : variant === 2
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="${background}"/><path d="M0 40 L200 40 L200 60 L0 60 Z M0 100 L200 100 L200 120 L0 120 Z" fill="${foreground}" opacity="0.3"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="${background}"/><path d="M20 0 L0 20 L20 40 L40 20 Z M80 0 L60 20 L80 40 L100 20 Z M140 0 L120 20 L140 40 L160 20 Z" fill="${foreground}" opacity="0.35"/></svg>`;
+  return encodeSvgDataUrl(svg);
+}
+
 export default function ThemeUploadPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -26,6 +39,9 @@ export default function ThemeUploadPage() {
   const [mainImageUrl, setMainImageUrl] = useState("");
   const [selectedImageUrl, setSelectedImageUrl] = useState("");
   const [selectedImageLabel, setSelectedImageLabel] = useState("");
+  const [selectedThumbnailUrl, setSelectedThumbnailUrl] = useState("");
+  const [selectedThumbnailLabel, setSelectedThumbnailLabel] = useState("");
+  const [patternOptions, setPatternOptions] = useState<GalleryAsset[]>([]);
   const [galleryAssets, setGalleryAssets] = useState<GalleryAsset[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
   const [galleryError, setGalleryError] = useState<string | null>(null);
@@ -52,8 +68,19 @@ export default function ThemeUploadPage() {
 
   useEffect(() => {
     const generated = normalizeThemeSlug(name || "");
-    setSlug(generated || "tema");
+    setSlug(generated || `theme-${Math.floor(1000 + Math.random() * 9000)}`);
   }, [name]);
+
+  useEffect(() => {
+    const color = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#8b5cf6";
+    const surface = getComputedStyle(document.documentElement).getPropertyValue("--surface").trim() || "#ffffff";
+    const variantOptions = [
+      { category: "pattern", fileName: "pattern-1.svg", url: createPatternDataUrl(surface, color, 1), label: "Modern desen" },
+      { category: "pattern", fileName: "pattern-2.svg", url: createPatternDataUrl(surface, color, 2), label: "Çizgili desen" },
+      { category: "pattern", fileName: "pattern-3.svg", url: createPatternDataUrl(surface, color, 3), label: "Geometrik desen" },
+    ];
+    setPatternOptions(variantOptions as GalleryAsset[]);
+  }, []);
 
   useEffect(() => {
     const fetchGallery = async () => {
@@ -81,7 +108,8 @@ export default function ThemeUploadPage() {
     setError(null);
     setSuccess(null);
 
-    const imageUrl = selectedImageUrl || mainImageUrl.trim();
+    const imageUrl = mainImageUrl.trim() || selectedImageUrl;
+    const finalThumbnail = thumbnailUrl.trim() || selectedThumbnailUrl || imageUrl || defaultThumbnail;
     if (!name.trim() || !cssCode.trim()) {
       setError("Tema adı ve CSS kodu gereklidir.");
       return;
@@ -96,14 +124,13 @@ export default function ThemeUploadPage() {
         },
         body: JSON.stringify({
           name,
-          slug,
           description,
           author,
           tags: selectedTags,
           mainImageUrl: imageUrl,
           selectedImageUrl: selectedImageUrl,
           cssCode,
-          thumbnailUrl: thumbnailUrl || imageUrl || defaultThumbnail,
+          thumbnailUrl: finalThumbnail,
           status,
         }),
       });
@@ -242,8 +269,52 @@ export default function ThemeUploadPage() {
               placeholder="https://example.com/ana-gorsel.jpg"
               className="w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--input-text)] outline-none transition focus:border-[var(--accent)]"
             />
-            <p className="text-xs text-[var(--muted)]">Elle görsel linki girmek istemezsen galeri seçeneğinden bir görsel seçebilirsin.</p>
+            <p className="text-xs text-[var(--muted)]">Link alanını doldurduysan bu kullanılacak; boş bırakırsan aşağıdaki seçtiğin görsel kullanılacak.</p>
           </label>
+
+          <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface-strong)] p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--accent)]/90">Standart Desenler</p>
+                <h2 className="mt-2 text-lg font-semibold text-[var(--text)]">Tema Önizleme Seç</h2>
+              </div>
+              {selectedImageUrl ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedImageUrl("");
+                    setSelectedImageLabel("");
+                  }}
+                  className="rounded-full bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--surface-strong)]"
+                >
+                  Seçimi Temizle
+                </button>
+              ) : null}
+            </div>
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Standart desenlerle tema görselini hızlıca seçebilirsin. Bu desenler sitenin mevcut renk temasına uyumlu görünür.</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {patternOptions.map((pattern) => (
+                <button
+                  key={pattern.fileName}
+                  type="button"
+                  onClick={() => {
+                    setSelectedImageUrl(pattern.url);
+                    setSelectedImageLabel(pattern.label);
+                  }}
+                  className={`rounded-3xl border p-0 text-left transition ${
+                    selectedImageUrl === pattern.url ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"
+                  }`}
+                >
+                  <div className="relative h-28 overflow-hidden rounded-t-3xl bg-[var(--surface)]">
+                    <div className="h-full w-full" style={{ backgroundImage: `url(${pattern.url})`, backgroundSize: "cover" }} />
+                  </div>
+                  <div className="space-y-2 p-4">
+                    <p className="text-sm font-semibold text-[var(--text)]">{pattern.label}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
 
           <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface-strong)] p-6">
             <div className="flex items-center justify-between gap-3">
@@ -272,31 +343,57 @@ export default function ThemeUploadPage() {
             ) : (
               <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {galleryAssets.map((asset) => (
-                  <button
+                  <div
                     key={asset.imagePath}
-                    type="button"
-                    onClick={() => {
-                      setSelectedImageUrl(asset.url);
-                      setSelectedImageLabel(asset.label);
-                    }}
-                    className={`group overflow-hidden rounded-3xl border p-0 text-left transition ${
-                      selectedImageUrl === asset.url ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"
+                    className={`group overflow-hidden rounded-3xl border p-0 transition ${
+                      selectedImageUrl === asset.url || selectedThumbnailUrl === asset.url
+                        ? "border-[var(--accent)]"
+                        : "border-[var(--border)] hover:border-[var(--accent)]"
                     }`}
                   >
                     <div className="relative h-40 overflow-hidden bg-[var(--surface)]">
                       <img src={asset.url} alt={asset.label} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                     </div>
-                    <div className="space-y-2 p-4">
-                      <p className="text-sm font-semibold text-[var(--text)]">{asset.label}</p>
-                      <p className="text-xs text-[var(--muted)]">{asset.category}</p>
+                    <div className="space-y-3 p-4">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--text)]">{asset.label}</p>
+                        <p className="text-xs text-[var(--muted)]">{asset.category}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedImageUrl(asset.url);
+                            setSelectedImageLabel(asset.label);
+                          }}
+                          className="rounded-full bg-[var(--surface-strong)] px-3 py-2 text-xs font-semibold text-[var(--muted)] transition hover:bg-[var(--surface)]"
+                        >
+                          Tema Görseli Olarak Seç
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedThumbnailUrl(asset.url);
+                            setSelectedThumbnailLabel(asset.label);
+                          }}
+                          className="rounded-full bg-[var(--surface-strong)] px-3 py-2 text-xs font-semibold text-[var(--muted)] transition hover:bg-[var(--surface)]"
+                        >
+                          Thumbnail Olarak Seç
+                        </button>
+                      </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
             {selectedImageUrl ? (
               <div className="mt-4 rounded-3xl border border-[var(--accent)] bg-[var(--surface)] p-4 text-sm text-[var(--text)]">
-                Seçilen görsel: <span className="font-semibold">{selectedImageLabel}</span>
+                Seçilen tema görseli: <span className="font-semibold">{selectedImageLabel}</span>
+              </div>
+            ) : null}
+            {selectedThumbnailUrl ? (
+              <div className="mt-4 rounded-3xl border border-[var(--accent)] bg-[var(--surface)] p-4 text-sm text-[var(--text)]">
+                Seçilen thumbnail: <span className="font-semibold">{selectedThumbnailLabel}</span>
               </div>
             ) : null}
           </section>

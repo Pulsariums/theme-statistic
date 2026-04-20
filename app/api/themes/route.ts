@@ -30,9 +30,8 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const name = String(body.name || "").trim();
-  const rawSlug = String(body.slug || "").trim();
-  const baseSlug = rawSlug ? normalizeThemeSlug(rawSlug) : normalizeThemeSlug(name);
-  const normalizedSlug = baseSlug || "tema";
+  const baseSlug = normalizeThemeSlug(name);
+  const normalizedSlug = baseSlug || `theme-${Math.floor(1000 + Math.random() * 9000)}`;
   const description = String(body.description || "").trim();
   const author = String(body.author || currentUser.username).trim();
   const incomingTags = typeof body.tags === "string"

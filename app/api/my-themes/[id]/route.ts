@@ -69,6 +69,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     updates.tags = body.tags.map(String).map((tag: string) => tag.trim()).filter(Boolean);
   }
   if (typeof body.thumbnailUrl === "string") updates.thumbnail_url = body.thumbnailUrl.trim() || null;
+  if (typeof body.cssCode === "string") updates.css_code = body.cssCode.trim() || null;
   if (typeof body.status === "string" && ["draft", "pending", "published", "archived"].includes(body.status)) {
     updates.status = body.status as "draft" | "pending" | "published" | "archived";
   }
