@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theme Statistics Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #0f172a; color: #e2e8f0; }
+    header { padding: 24px; background: #111827; }
+    main { padding: 24px; }
+    .card { background: #1f2937; border-radius: 12px; padding: 18px; margin-bottom: 18px; box-shadow: 0 12px 24px rgba(0,0,0,.2); }
+    button { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; background: #2563eb; color: white; }
+    input, textarea { width: 100%; margin-top: 8px; margin-bottom: 16px; padding: 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; }
+    .theme-item { border-bottom: 1px solid #334155; padding: 12px 0; }
+    .theme-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Theme Statistics Dashboard</h1>
+    <p>Bu arayüz, Vercel API ve tema metadata yönetimi için ilk proof-of-concept.</p>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Temalar</h2>
+      <div id="themeList">Yükleniyor...</div>
+    </section>
+
+    <section class="card">
+      <h2>Yeni Tema Gönder</h2>
+      <p>Bu demo formu, ileride tema gönderme / güncelleme işlevi için başlangıç.</p>
+      <input id="themeName" placeholder="Tema adı" />
+      <input id="themeSlug" placeholder="Tema slug" />
+      <textarea id="themeDesc" rows="4" placeholder="Tema açıklaması"></textarea>
+      <button id="submitBtn">Tema Gönder</button>
+      <div id="submitResult"></div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

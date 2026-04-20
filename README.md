@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenAnime Theme System
 
-## Getting Started
+Bu depo iki ayrı bölüm halinde tasarlandı:
 
-First, run the development server:
+- `vercel/` — Vercel'e deploy edilecek uygulama. İçinde API, arayüz ve tema yönetimi için başlangıç kodu var.
+- `themes/` — gerçek CSS tema dosyalarının saklandığı yer. Bu klasör, farklı tema deposuna dönüştürülebilir.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## `vercel/` içeriği
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `vercel/api/count.js` — CSS isteğiyle gelen tema kullanımını sayar.
+- `vercel/api/themes.js` — tema meta verilerini listeler ve demo amaçlı tema ekleme/güncelleme sağlar.
+- `vercel/public/index.html` — basit bir arayüz: tema listesini gösterir ve yeni tema eklemeye izin verir.
+- `vercel/vercel.json` — Vercel dağıtımı için yapılandırma.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## `themes/` içeriği
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Bu klasörde her tema için `.css` dosyaları yer alır. Örnek:
 
-## Learn More
+- `themes/openanime.css`
 
-To learn more about Next.js, take a look at the following resources:
+## Nasıl kullanılır
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. `vercel/` klasörünü Vercel projesi olarak deploy edin.
+2. `vercel/public/index.html` arayüzü üzerinden tema meta verilerini görebilir ve demo gönderimler yapabilirsiniz.
+3. `themes/` klasöründeki CSS dosyalarını, sitenin custom CSS alanına ekleyerek kullanabilirsiniz.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Geliştirme fikirleri
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `vercel/api/count.js` içindeki in-memory cache yerine Vercel KV / Supabase / MongoDB bağlanması.
+- Tema dosyalarını `themes/` klasöründen gerçek bir tema deposuna taşıma.
+- `vercel/public/` içinde kullanıcı oturumu, tema yetkilendirme ve tema yükleme arayüzü ekleme.
+- `vercel/api/themes.js` üzerinde dosya veya DB tabanlı kalıcı tema yönetimi.
+- OpenAnime için tema yapma rehberi ve örnek parametrelerin eklenmesi.

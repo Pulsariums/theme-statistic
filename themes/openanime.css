@@ -1,0 +1,11 @@
+/* OpenAnime theme with Vercel tracking pixel */
+
+body {
+  background-image: url("https://<YOUR-VERCEL-APP>.vercel.app/api/count?theme=openanime");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-color: #050a16;
+}
+
+/* Eğer sitesi custom background olarak kullanılacaksa bu CSS dosyası theme yüklenince Vercel API isteği atar. */
