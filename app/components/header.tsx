@@ -8,8 +8,6 @@ const baseLinks = [
   { href: "/", label: "Ana Sayfa" },
   { href: "/browse", label: "Gözat" },
   { href: "/gallery", label: "Galeri" },
-  { href: "/theme-builder", label: "Tema Oluştur" },
-  { href: "/theme-upload", label: "Tema Yükle" },
 ];
 
 export default function Header() {

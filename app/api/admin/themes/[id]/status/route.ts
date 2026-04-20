@@ -27,9 +27,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const status = ["draft", "pending", "published", "archived"].includes(body.status)
     ? body.status
     : "pending";
+  const reason = typeof body.reason === "string" ? body.reason.trim() : null;
 
   try {
-    const theme = await updateThemeStatus(id, status as "draft" | "pending" | "published" | "archived");
+    const theme = await updateThemeStatus(id, status as "draft" | "pending" | "published" | "archived", reason);
     return NextResponse.json({ theme });
   } catch (error) {
     console.error("Theme status update failed", error);

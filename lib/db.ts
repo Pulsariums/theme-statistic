@@ -79,6 +79,9 @@ export async function initDatabase() {
       thumbnail_url TEXT,
       image_urls TEXT[],
       css_code TEXT,
+      moderation_reason TEXT,
+      delete_requested_at TIMESTAMPTZ,
+      deleted_at TIMESTAMPTZ,
       use_count INTEGER NOT NULL DEFAULT 0,
       release_date DATE,
       owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -91,6 +94,9 @@ export async function initDatabase() {
   await pool.query(`ALTER TABLE themes ADD COLUMN IF NOT EXISTS thumbnail_url TEXT;`);
   await pool.query(`ALTER TABLE themes ADD COLUMN IF NOT EXISTS image_urls TEXT[];`);
   await pool.query(`ALTER TABLE themes ADD COLUMN IF NOT EXISTS css_code TEXT;`);
+  await pool.query(`ALTER TABLE themes ADD COLUMN IF NOT EXISTS moderation_reason TEXT;`);
+  await pool.query(`ALTER TABLE themes ADD COLUMN IF NOT EXISTS delete_requested_at TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE themes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS theme_usage_daily (
@@ -201,6 +207,23 @@ export async function findUserById(id: number) {
   return rows[0] ?? null;
 }
 
+export async function themeSlugExists(slug: string) {
+  const rows = await query<{ exists: boolean }>(
+    `SELECT EXISTS(SELECT 1 FROM themes WHERE slug = $1) AS exists`,
+    [slug]
+  );
+  return rows[0]?.exists ?? false;
+}
+
+export async function ensureUniqueThemeSlug(baseSlug: string) {
+  let slug = baseSlug;
+  let suffix = 2;
+  while (await themeSlugExists(slug)) {
+    slug = `${baseSlug}-${suffix++}`;
+  }
+  return slug;
+}
+
 export async function updateUserRole(id: number, role: "user" | "admin") {
   const rows = await query<UserRecord>(
     `UPDATE users SET role = $1 WHERE id = $2 RETURNING id, username, email, name, role, created_at`,
@@ -267,6 +290,9 @@ export type ThemeRecord = {
   thumbnail_url: string | null;
   image_urls: string[] | null;
   css_code: string | null;
+  moderation_reason: string | null;
+  delete_requested_at: string | null;
+  deleted_at: string | null;
   use_count: number;
   release_date: string | null;
   owner_id: number | null;
@@ -275,24 +301,37 @@ export type ThemeRecord = {
   updated_at: string;
 };
 
+export async function cleanupPendingDeletes() {
+  await query(`DELETE FROM themes WHERE delete_requested_at IS NOT NULL AND deleted_at IS NULL AND delete_requested_at <= NOW() - INTERVAL '7 days'`);
+}
+
 export async function getPublishedThemes() {
+  await cleanupPendingDeletes();
   return query<ThemeRecord>(
-    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE status = 'published' ORDER BY release_date DESC NULLS LAST LIMIT 18`
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE status = 'published' AND delete_requested_at IS NULL AND deleted_at IS NULL ORDER BY release_date DESC NULLS LAST LIMIT 18`
   );
 }
 
 export async function getThemeBySlug(slug: string) {
   const rows = await query<ThemeRecord>(
-    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE slug = $1 AND status = 'published' LIMIT 1`,
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE slug = $1 AND status = 'published' AND delete_requested_at IS NULL AND deleted_at IS NULL LIMIT 1`,
     [slug]
   );
   return rows[0] ?? null;
 }
 
-export async function updateThemeStatus(id: number, status: "draft" | "pending" | "published" | "archived") {
+export async function getThemeBySlugIncludingPrivate(slug: string) {
   const rows = await query<ThemeRecord>(
-    `UPDATE themes SET status = $1 WHERE id = $2 RETURNING id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at`,
-    [status, id]
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE slug = $1 AND deleted_at IS NULL LIMIT 1`,
+    [slug]
+  );
+  return rows[0] ?? null;
+}
+
+export async function updateThemeStatus(id: number, status: "draft" | "pending" | "published" | "archived", moderation_reason?: string | null) {
+  const rows = await query<ThemeRecord>(
+    `UPDATE themes SET status = $1, moderation_reason = $2 WHERE id = $3 RETURNING id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, use_count, release_date, owner_id, status, created_at, updated_at`,
+    [status, moderation_reason || null, id]
   );
   return rows[0] ?? null;
 }
@@ -365,20 +404,21 @@ export async function getImageUsageHistory(imagePath: string, days = 14) {
 
 export async function getAllThemes() {
   return query<ThemeRecord>(
-    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at FROM themes ORDER BY created_at DESC`
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, use_count, release_date, owner_id, status, created_at, updated_at FROM themes ORDER BY created_at DESC`
   );
 }
 
 export async function getUserThemes(userId: number) {
+  await cleanupPendingDeletes();
   return query<ThemeRecord>(
-    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE owner_id = $1 ORDER BY updated_at DESC`,
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY updated_at DESC`,
     [userId]
   );
 }
 
 export async function getThemeById(id: number) {
   const rows = await query<ThemeRecord>(
-    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE id = $1 LIMIT 1`,
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
     [id]
   );
   return rows[0] ?? null;
@@ -386,7 +426,7 @@ export async function getThemeById(id: number) {
 
 export async function getUserFavorites(userId: number) {
   return query<ThemeRecord>(
-    `SELECT t.id, t.slug, t.name, t.description, t.author, t.tags, t.thumbnail_url, t.image_urls, t.css_code, t.use_count, t.release_date, t.owner_id, t.status, t.created_at, t.updated_at
+    `SELECT t.id, t.slug, t.name, t.description, t.author, t.tags, t.thumbnail_url, t.image_urls, t.css_code, t.moderation_reason, t.use_count, t.release_date, t.owner_id, t.status, t.created_at, t.updated_at
      FROM themes t
      JOIN favorites f ON f.theme_id = t.id
      WHERE f.user_id = $1
@@ -436,7 +476,10 @@ export async function updateThemeDetails(id: number, data: {
   tags?: string[];
   thumbnail_url?: string | null;
   css_code?: string | null;
-  status?: "draft" | "pending" | "published" | "archived";
+  moderation_reason?: string | null;
+  delete_requested_at?: string | null;
+  deleted_at?: string | null;
+  status?: "draft" | "pending" | "published" | "archived" | "pending_delete";
 }) {
   const fields = [] as string[];
   const values = [] as Array<any>;
@@ -466,6 +509,18 @@ export async function updateThemeDetails(id: number, data: {
     fields.push(`css_code = $${idx++}`);
     values.push(data.css_code);
   }
+  if (data.moderation_reason !== undefined) {
+    fields.push(`moderation_reason = $${idx++}`);
+    values.push(data.moderation_reason);
+  }
+  if (data.delete_requested_at !== undefined) {
+    fields.push(`delete_requested_at = $${idx++}`);
+    values.push(data.delete_requested_at);
+  }
+  if (data.deleted_at !== undefined) {
+    fields.push(`deleted_at = $${idx++}`);
+    values.push(data.deleted_at);
+  }
   if (data.status !== undefined) {
     fields.push(`status = $${idx++}`);
     values.push(data.status);
@@ -476,7 +531,7 @@ export async function updateThemeDetails(id: number, data: {
   }
 
   values.push(id);
-  const queryText = `UPDATE themes SET ${fields.join(", ")}, updated_at = NOW() WHERE id = $${idx} RETURNING id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at`;
+  const queryText = `UPDATE themes SET ${fields.join(", ")}, updated_at = NOW() WHERE id = $${idx} RETURNING id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, use_count, release_date, owner_id, status, created_at, updated_at`;
   const rows = await query<ThemeRecord>(queryText, values);
   return rows[0] ?? null;
 }
@@ -488,13 +543,14 @@ export async function createTheme(options: {
   author?: string;
   tags?: string[];
   thumbnail_url?: string;
-  image_urls?: string[];
+  image_urls?: string[] | null;
   css_code?: string | null;
+  moderation_reason?: string | null;
   owner_id: number | null;
   status?: "draft" | "pending" | "published" | "archived";
 }) {
   const rows = await query<ThemeRecord>(
-    `INSERT INTO themes (slug, name, description, author, tags, thumbnail_url, image_urls, css_code, owner_id, status, release_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) RETURNING id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, use_count, release_date, owner_id, status, created_at, updated_at`,
+    `INSERT INTO themes (slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, owner_id, status, release_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW()) RETURNING id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at`,
     [
       options.slug,
       options.name,
@@ -504,11 +560,26 @@ export async function createTheme(options: {
       options.thumbnail_url || null,
       options.image_urls || null,
       options.css_code || null,
+      options.moderation_reason || null,
+      null,
+      null,
       options.owner_id,
       options.status || "pending",
     ]
   );
   return rows[0];
+}
+
+export async function requestThemeDeletion(id: number) {
+  const rows = await query<ThemeRecord>(
+    `UPDATE themes SET status = 'pending_delete', delete_requested_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at`,
+    [id]
+  );
+  return rows[0] ?? null;
+}
+
+export async function deleteThemeById(id: number) {
+  await query(`DELETE FROM themes WHERE id = $1`, [id]);
 }
 
 export async function incrementThemeUseCount(id: number) {

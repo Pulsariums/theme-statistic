@@ -19,6 +19,7 @@ type Theme = {
   description: string | null;
   author: string | null;
   tags: string[] | null;
+  moderation_reason: string | null;
   use_count: number;
   release_date: string | null;
   status: string;
@@ -40,6 +41,12 @@ export default function AdminPage() {
   const [data, setData] = useState<AdminData | null>(null);
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
+  const [reviewReason, setReviewReason] = useState<Record<number, string>>({});
+  const [galleryCategory, setGalleryCategory] = useState("");
+  const [galleryLabel, setGalleryLabel] = useState("");
+  const [galleryFile, setGalleryFile] = useState<File | null>(null);
+  const [galleryMessage, setGalleryMessage] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -104,16 +111,16 @@ export default function AdminPage() {
     }
   };
 
-  const changeThemeStatus = async (themeId: number, currentStatus: string) => {
+  const changeThemeStatus = async (themeId: number, targetStatus: string) => {
     if (!data) return;
-    const targetStatus = currentStatus === "published" ? "archived" : "published";
+    const reason = reviewReason[themeId] || null;
 
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/themes/${themeId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: targetStatus }),
+        body: JSON.stringify({ status: targetStatus, reason }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -124,7 +131,7 @@ export default function AdminPage() {
             ? {
                 ...prev,
                 themes: prev.themes.map((theme) =>
-                  theme.id === themeId ? { ...theme, status: result.theme.status } : theme
+                  theme.id === themeId ? { ...theme, status: result.theme.status, moderation_reason: result.theme.moderation_reason } : theme
                 ),
               }
             : prev
@@ -133,6 +140,71 @@ export default function AdminPage() {
       }
     } catch {
       setError("Tema durumu güncellenirken sunucu hatası oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteTheme = async (themeId: number) => {
+    if (!data) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/admin/themes/${themeId}/delete`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error || "Tema silinemedi.");
+      } else {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                themes: prev.themes.filter((theme) => theme.id !== themeId),
+              }
+            : prev
+        );
+        setError(null);
+      }
+    } catch {
+      setError("Tema silinirken sunucu hatası oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadGalleryImage = async () => {
+    setGalleryError(null);
+    setGalleryMessage(null);
+    if (!galleryCategory.trim() || !galleryFile) {
+      setGalleryError("Kategori ve dosya gereklidir.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("category", galleryCategory.trim());
+    formData.append("label", galleryLabel.trim());
+    formData.append("file", galleryFile);
+
+    try {
+      setLoading(true);
+      const response = await fetch("/api/admin/gallery-assets", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setGalleryError(result.error || "Galeri görseli yüklenemedi.");
+      } else {
+        setGalleryMessage("Görsel yüklendi. Galeri sayfasını yenileyerek yeni resmi görebilirsiniz.");
+        setGalleryCategory("");
+        setGalleryLabel("");
+        setGalleryFile(null);
+        setGalleryError(null);
+      }
+    } catch {
+      setGalleryError("Galeri yüklemesi sırasında sunucu hatası oluştu.");
     } finally {
       setLoading(false);
     }
@@ -250,16 +322,123 @@ export default function AdminPage() {
                         <span>{theme.author || "Bilinmeyen"}</span>
                         <span>{theme.use_count} kullanım</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => changeThemeStatus(theme.id, theme.status)}
-                        className="mt-4 inline-flex rounded-2xl bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--accent-strong)]"
-                      >
-                        {theme.status === "published" ? "Arşivle" : "Yayınla"}
-                      </button>
+                      {theme.moderation_reason ? (
+                        <div className="mt-3 rounded-3xl border border-yellow-500/20 bg-yellow-950/10 p-3 text-xs text-yellow-200">
+                          <p className="font-semibold">İnceleme Notu</p>
+                          <p>{theme.moderation_reason}</p>
+                        </div>
+                      ) : null}
+                      <div className="mt-3 grid gap-3">
+                        <Link
+                          href={`/admin/themes/${theme.id}`}
+                          className="inline-flex rounded-full bg-[var(--surface-strong)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--surface)]"
+                        >
+                          Detayları Düzenle
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => deleteTheme(theme.id)}
+                          className="inline-flex rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-rose-500"
+                        >
+                          Kalıcı Sil
+                        </button>
+                      </div>
+                      <label className="mt-3 space-y-2 text-xs text-[var(--muted)]">
+                        <span>Onay/Reddet notu</span>
+                        <input
+                          value={reviewReason[theme.id] ?? ""}
+                          onChange={(event) => setReviewReason((prev) => ({ ...prev, [theme.id]: event.target.value }))}
+                          placeholder="Reddedilme nedeni veya kısa not"
+                          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2 text-xs text-[var(--input-text)] outline-none transition focus:border-[var(--accent)]"
+                        />
+                      </label>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {theme.status === "pending" ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => changeThemeStatus(theme.id, "published")}
+                              className="inline-flex rounded-2xl bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--accent-strong)]"
+                            >
+                              Onayla
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => changeThemeStatus(theme.id, "archived")}
+                              className="inline-flex rounded-2xl bg-rose-600 px-3 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-rose-500"
+                            >
+                              Reddet
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => changeThemeStatus(theme.id, theme.status === "published" ? "archived" : "published")}
+                            className="inline-flex rounded-2xl bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--accent-strong)]"
+                          >
+                            {theme.status === "published" ? "Arşivle" : "Yayınla"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
+              </section>
+
+              <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface-strong)] p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-[var(--text)]">Galeri Yüklemesi</h2>
+                    <p className="mt-1 text-sm text-[var(--muted)]">Yeni görselleri kategori seçerek galeriye ekleyebilirsiniz.</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <label className="space-y-2 text-sm text-[var(--text)]">
+                    <span>Kategori</span>
+                    <input
+                      value={galleryCategory}
+                      onChange={(event) => setGalleryCategory(event.target.value)}
+                      placeholder="ör. backgrounds"
+                      className="w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--input-text)] outline-none transition focus:border-[var(--accent)]"
+                    />
+                  </label>
+
+                  <label className="space-y-2 text-sm text-[var(--text)]">
+                    <span>Etiket / Başlık</span>
+                    <input
+                      value={galleryLabel}
+                      onChange={(event) => setGalleryLabel(event.target.value)}
+                      placeholder="Ör. Re:Zero Logo"
+                      className="w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--input-text)] outline-none transition focus:border-[var(--accent)]"
+                    />
+                  </label>
+                </div>
+
+                <label className="mt-4 block text-sm text-[var(--text)]">
+                  <span>Görsel Dosyası</span>
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.webp,.gif,.svg"
+                    onChange={(event) => setGalleryFile(event.currentTarget.files?.[0] ?? null)}
+                    className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--input-text)] outline-none transition focus:border-[var(--accent)]"
+                  />
+                </label>
+
+                {galleryError ? (
+                  <div className="rounded-3xl border border-rose-500/30 bg-rose-950/20 p-4 text-sm text-rose-200">{galleryError}</div>
+                ) : galleryMessage ? (
+                  <div className="rounded-3xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-sm text-emerald-200">{galleryMessage}</div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={uploadGalleryImage}
+                  disabled={loading}
+                  className="mt-4 inline-flex rounded-2xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--accent-strong)] disabled:opacity-60"
+                >
+                  Galeriye Yükle
+                </button>
               </section>
             </div>
           ) : null}

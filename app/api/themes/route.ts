@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createTheme, getPublishedThemes, initDatabase } from "@/lib/db";
+import { createTheme, getPublishedThemes, initDatabase, ensureUniqueThemeSlug } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { normalizeThemeSlug, PREDEFINED_THEME_TAGS } from "@/lib/theme-helpers";
 
 async function ensureDb() {
   try {
@@ -29,35 +30,39 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const name = String(body.name || "").trim();
-  const slug = String(body.slug || "").trim() || String(name).toLowerCase().replace(/[^a-z0-9-_]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  const rawSlug = String(body.slug || "").trim();
+  const baseSlug = rawSlug ? normalizeThemeSlug(rawSlug) : normalizeThemeSlug(name);
+  const normalizedSlug = baseSlug || "tema";
   const description = String(body.description || "").trim();
   const author = String(body.author || currentUser.username).trim();
-  const tags = typeof body.tags === "string"
+  const incomingTags = typeof body.tags === "string"
     ? body.tags.split(",").map((tag: string) => tag.trim()).filter(Boolean)
     : Array.isArray(body.tags)
     ? body.tags.map(String).map((tag: string) => tag.trim()).filter(Boolean)
     : [];
-  const mainImageUrl = String(body.mainImageUrl || "").trim();
+  const tags = incomingTags.filter((tag: string) => PREDEFINED_THEME_TAGS.includes(tag));
+  const selectedImageUrl = String(body.mainImageUrl || body.selectedImageUrl || "").trim();
   const cssCode = String(body.cssCode || body.css_code || "").trim();
-  const thumbnailUrl = String(body.thumbnailUrl || mainImageUrl || "").trim();
+  const thumbnailUrl = String(body.thumbnailUrl || selectedImageUrl || "").trim();
   const rawStatus = String(body.status || "pending").trim();
   const status = rawStatus === "draft" || rawStatus === "pending" || rawStatus === "published" || rawStatus === "archived" ? rawStatus : "pending";
   const finalStatus = currentUser.role === "admin" ? status : status === "draft" ? "draft" : "pending";
 
   const defaultThumbnail = "https://via.placeholder.com/640x360?text=Pulsar+Theme";
-  if (!name || !mainImageUrl || !cssCode) {
-    return NextResponse.json({ error: "Tema adı, görsel URL'si ve CSS kodu gereklidir." }, { status: 400 });
+  if (!name || !cssCode) {
+    return NextResponse.json({ error: "Tema adı ve CSS kodu gereklidir." }, { status: 400 });
   }
 
   try {
+    const uniqueSlug = await ensureUniqueThemeSlug(normalizedSlug);
     const theme = await createTheme({
-      slug,
+      slug: uniqueSlug,
       name,
       description,
       author,
       tags,
       thumbnail_url: thumbnailUrl || defaultThumbnail,
-      image_urls: [mainImageUrl],
+      image_urls: selectedImageUrl ? [selectedImageUrl] : null,
       css_code: cssCode,
       owner_id: currentUser.id,
       status: finalStatus,

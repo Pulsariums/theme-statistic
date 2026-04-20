@@ -24,7 +24,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
 
   const theme = await getThemeById(id);
-  if (!theme || theme.owner_id !== user.id) {
+  if (!theme || (theme.owner_id !== user.id && user.role !== "admin")) {
     return NextResponse.json({ error: "Tema bulunamadı veya yetkiniz yok." }, { status: 404 });
   }
 
@@ -45,7 +45,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   const theme = await getThemeById(id);
-  if (!theme || theme.owner_id !== user.id) {
+  if (!theme || (theme.owner_id !== user.id && user.role !== "admin")) {
     return NextResponse.json({ error: "Tema bulunamadı veya yetkiniz yok." }, { status: 404 });
   }
 

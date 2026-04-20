@@ -22,6 +22,9 @@ const marker = Permanent_Marker({
 export const metadata: Metadata = {
   title: "Pulsar Themes | OpenAnime Tema Portalı",
   description: "OpenAnime için takım ve proje destekli tema paylaşım sitesi.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
