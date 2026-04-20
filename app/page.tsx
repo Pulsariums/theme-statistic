@@ -26,7 +26,7 @@ export default async function Home() {
   const latest = sortLatest(themes).slice(0, 6);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--text)]">
       <section className="py-16">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 sm:px-10">
           <div className="rounded-[32px] border border-slate-800 bg-slate-900/95 p-10 shadow-[0_30px_60px_rgba(15,23,42,0.55)]">

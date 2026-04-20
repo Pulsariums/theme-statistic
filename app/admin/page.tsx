@@ -74,8 +74,38 @@ export default function AdminPage() {
     setSearch(query.trim());
   };
 
+  const toggleRole = async (userId: number, currentRole: string) => {
+    if (!data) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: currentRole === "admin" ? "user" : "admin" }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error || "Rol güncellenemedi.");
+      } else {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                users: prev.users.map((user) => (user.id === userId ? { ...user, role: result.user.role } : user)),
+              }
+            : prev
+        );
+        setError(null);
+      }
+    } catch {
+      setError("Rol güncellenirken sunucu hatası oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--text)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 sm:px-10">
         <div className="rounded-[32px] border border-slate-800 bg-slate-900/95 p-10 shadow-[0_30px_60px_rgba(15,23,42,0.7)]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -143,6 +173,7 @@ export default function AdminPage() {
                         <th className="px-4 py-3">E-posta</th>
                         <th className="px-4 py-3">Rol</th>
                         <th className="px-4 py-3">Oluşturulma</th>
+                        <th className="px-4 py-3">Eylem</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
@@ -152,6 +183,15 @@ export default function AdminPage() {
                           <td className="px-4 py-3">{user.email}</td>
                           <td className="px-4 py-3">{user.role}</td>
                           <td className="px-4 py-3">{new Date(user.created_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3">
+                            <button
+                              disabled={loading}
+                              onClick={() => toggleRole(user.id, user.role)}
+                              className="rounded-2xl bg-fuchsia-400 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-fuchsia-300 disabled:opacity-60"
+                            >
+                              {user.role === "admin" ? "Kullanıcı Yap" : "Admin Yap"}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

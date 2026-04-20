@@ -53,7 +53,7 @@ export default function BrowsePage() {
   }, [query, selectedTag, themes]);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--text)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 sm:px-10">
         <section className="rounded-[32px] border border-slate-800 bg-slate-900/95 p-8 shadow-[0_32px_80px_rgba(15,23,42,0.65)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

@@ -35,7 +35,7 @@ export default function ThemeBuilderPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--text)]">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-12 sm:px-10">
         <div className="rounded-[32px] border border-slate-800 bg-slate-900/95 p-10 shadow-[0_30px_60px_rgba(15,23,42,0.7)]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

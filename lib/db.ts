@@ -1,10 +1,30 @@
 import { Pool } from "pg";
 import argon2 from "argon2";
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.DATABASE_URL_UNPOOLED ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  buildConnectionStringFromEnv();
 
 if (!connectionString) {
   console.warn("DATABASE_URL is not configured. Database-backed auth and theme management will be disabled.");
+}
+
+function buildConnectionStringFromEnv() {
+  const host = process.env.PGHOST || process.env.POSTGRES_HOST;
+  const user = process.env.PGUSER || process.env.POSTGRES_USER;
+  const password = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD;
+  const database = process.env.PGDATABASE || process.env.POSTGRES_DATABASE;
+  const sslmode = "require";
+
+  if (!host || !user || !password || !database) {
+    return undefined;
+  }
+
+  const encodedPassword = encodeURIComponent(password);
+  return `postgresql://${user}:${encodedPassword}@${host}/${database}?sslmode=${sslmode}`;
 }
 
 declare global {
@@ -101,8 +121,21 @@ export async function findUserByUsername(username: string) {
   return rows[0] ?? null;
 }
 
+export async function findUserByEmail(email: string) {
+  const rows = await query<UserRecord>(`SELECT * FROM users WHERE email = $1 LIMIT 1`, [email]);
+  return rows[0] ?? null;
+}
+
 export async function findUserById(id: number) {
   const rows = await query<UserRecord>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [id]);
+  return rows[0] ?? null;
+}
+
+export async function updateUserRole(id: number, role: "user" | "admin") {
+  const rows = await query<UserRecord>(
+    `UPDATE users SET role = $1 WHERE id = $2 RETURNING id, username, email, name, role, created_at`,
+    [role, id]
+  );
   return rows[0] ?? null;
 }
 

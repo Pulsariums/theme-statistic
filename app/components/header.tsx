@@ -35,9 +35,9 @@ export default function Header() {
   const themeLabel = theme === "black" ? "Jet" : "Blush";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-800/90 bg-slate-950/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-[var(--border)]/90 bg-[var(--surface)]/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-10">
-        <Link href="/" className="font-marker text-lg text-white uppercase tracking-[0.22em] text-shadow leading-none brand-effect">
+        <Link href="/" className="font-marker text-lg text-[var(--text)] uppercase tracking-[0.22em] text-shadow leading-none brand-effect">
           Pulsar Themes
         </Link>
 
@@ -60,7 +60,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setTheme(theme === "black" ? "blush" : "black")}
-              className="rounded-full px-4 py-2 text-sm font-medium bg-slate-900 text-slate-100 transition hover:bg-slate-800"
+              className="rounded-full px-4 py-2 text-sm font-medium bg-[var(--surface-strong)] text-[var(--text)] transition hover:bg-[var(--surface)]"
             >
               {theme === "black" ? "Açık Tema" : "Koyu Tema"}
             </button>

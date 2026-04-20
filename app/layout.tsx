@@ -31,9 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${marker.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${marker.variable} antialiased bg-[var(--background)] text-[var(--text)] transition-colors duration-300`}>
         <Header />
-        <div className="min-h-screen bg-slate-950 text-slate-100">{children}</div>
+        <div className="min-h-screen bg-[var(--background)] text-[var(--text)]">{children}</div>
       </body>
     </html>
   );
