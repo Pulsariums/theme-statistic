@@ -109,6 +109,9 @@
 2. `R:\opeanni.me css` ve `R:\opeanni.me css\seks` dosyalarını tek tek analiz etmek için bir tarama yap.
 3. site analizi için bypass header ile `opeanani.me` içeriğini çek ve hedef seçicileri çıkar.
 4. bu sonuçları tema üretim arayüzüne entegre et.
+5. `THEME_CSS_TECHNIQUE_POOL.md` ve `THEME_BUILDER_SPEC.md` belgelerini oluştur.
+6. `theme_analysis.py` aracını kullanarak CSS dosyalarını tekrar tarayabil.
+7. mümkünse `opeanani.me` için HTML/CSS/JS yüklemelerini yeniden test et ve site özel şablonları tamamla.
 
 ## 4. Tema kimlikleme ve sayım planı
 

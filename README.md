@@ -9,7 +9,7 @@ Bu depo iki ayrı bölüm halinde tasarlandı:
 
 - `vercel/api/count.js` — CSS isteğiyle gelen tema kullanımını sayar.
 - `vercel/api/themes.js` — tema meta verilerini listeler ve demo amaçlı tema ekleme/güncelleme sağlar.
-- `vercel/public/index.html` — basit bir arayüz: tema listesini gösterir ve yeni tema eklemeye izin verir.
+- `vercel/public/index.html` — kullanıcı kaydı, proje/takım iş akışı ve tema yükleme ile bir çalışma alanı arayüzü sunar.
 - `vercel/vercel.json` — Vercel dağıtımı için yapılandırma.
 
 ## `themes/` içeriği
@@ -28,6 +28,7 @@ Bu klasörde her tema için `.css` dosyaları yer alır. Örnek:
 
 - `vercel/api/count.js` içindeki in-memory cache yerine Vercel KV / Supabase / MongoDB bağlanması.
 - Tema dosyalarını `themes/` klasöründen gerçek bir tema deposuna taşıma.
-- `vercel/public/` içinde kullanıcı oturumu, tema yetkilendirme ve tema yükleme arayüzü ekleme.
+- `vercel/public/` içinde kullanıcı oturumu, proje/takım yetkilendirmesi ve tema yükleme arayüzü ekleme.
+- `vercel/api/projects.js` üzerinde proje metadata, thumbnail, plugin kontrolü ve takım ilişkisi sağlama.
 - `vercel/api/themes.js` üzerinde dosya veya DB tabanlı kalıcı tema yönetimi.
 - OpenAnime için tema yapma rehberi ve örnek parametrelerin eklenmesi.

@@ -1,21 +1,14 @@
 const crypto = require('crypto');
+const { getUserById, recordThemeUsage, themes, projects } = require('./store');
 
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==',
   'base64'
 );
 
-function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.socket.remoteAddress || 'unknown';
-}
-
 function createFingerprint(req) {
   const values = [
-    getClientIp(req),
+    req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
     req.headers['user-agent'] || '',
     req.headers['accept-language'] || '',
     req.headers['sec-ch-ua'] || '',
@@ -27,22 +20,28 @@ function createFingerprint(req) {
   return crypto.createHash('sha256').update(values).digest('hex');
 }
 
-const visitCache = {};
-const MIN_REPEAT_MS = 1000 * 60 * 60 * 24; // 24 saat
-
 module.exports = function handler(req, res) {
   const theme = req.query.theme || 'unknown';
+  const themeId = req.query.themeId || 'unknown';
+  const projectId = req.query.projectId || null;
   const fingerprint = createFingerprint(req);
-  const now = Date.now();
 
-  const cacheKey = `${theme}:${fingerprint}`;
-  const lastSeen = visitCache[cacheKey] || 0;
+  const themeRecord = themes.find((item) => item.themeId === themeId || item.slug === theme);
+  const projectRecord = projects.find((item) => item.id === projectId);
+  const ownerId = themeRecord ? themeRecord.ownerId : null;
 
-  if (now - lastSeen > MIN_REPEAT_MS) {
-    visitCache[cacheKey] = now;
-    console.log(`Theme count increment: ${theme} fingerprint=${fingerprint}`);
+  const counted = recordThemeUsage({
+    theme,
+    themeId,
+    projectId,
+    ownerId,
+    fingerprint
+  });
+
+  if (counted) {
+    console.log(`Theme usage recorded: theme=${theme} themeId=${themeId} projectId=${projectId} fingerprint=${fingerprint}`);
   } else {
-    console.log(`Duplicate suppressed: ${theme} fingerprint=${fingerprint}`);
+    console.log(`Duplicate theme usage suppressed: theme=${theme} themeId=${themeId}`);
   }
 
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
