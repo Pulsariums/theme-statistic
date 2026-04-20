@@ -6,9 +6,9 @@ import { useDevice } from "@/app/hooks/useDevice";
 
 const links = [
   { href: "/", label: "Ana Sayfa" },
-  { href: "/browse", label: "Browse" },
-  { href: "/theme-builder", label: "Theme Builder" },
-  { href: "/admin", label: "Admin" },
+  { href: "/browse", label: "Gözat" },
+  { href: "/theme-builder", label: "Tema Oluştur" },
+  { href: "/login", label: "Giriş" },
 ];
 
 export default function Header() {
@@ -17,7 +17,9 @@ export default function Header() {
   const [theme, setTheme] = useState<"black" | "blush">("black");
 
   useEffect(() => {
-    const saved = typeof window !== "undefined" ? window.localStorage.getItem("epuslarTheme") : null;
+    const saved = typeof window !== "undefined"
+      ? window.localStorage.getItem("epulsarTheme") ?? window.localStorage.getItem("epuslarTheme")
+      : null;
     if (saved === "black" || saved === "blush") {
       setTheme(saved);
     }
@@ -27,7 +29,7 @@ export default function Header() {
     if (typeof window === "undefined") return;
     document.body.classList.remove("theme-black", "theme-blush");
     document.body.classList.add(`theme-${theme}`);
-    window.localStorage.setItem("epuslarTheme", theme);
+    window.localStorage.setItem("epulsarTheme", theme);
   }, [theme]);
 
   const themeLabel = theme === "black" ? "Jet" : "Blush";
@@ -35,8 +37,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800/90 bg-slate-950/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-10">
-        <Link href="/" className="font-semibold uppercase tracking-[0.2em] text-lg text-white">
-          epuslar themes
+        <Link href="/" className="font-marker text-lg text-white uppercase tracking-[0.22em] text-shadow leading-none brand-effect">
+          epulsar themes
         </Link>
 
         <div className="flex flex-1 items-center justify-end gap-3 min-[420px]:justify-between">

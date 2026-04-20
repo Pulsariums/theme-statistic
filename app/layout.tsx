@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 import Header from "@/app/components/header";
 
@@ -13,8 +13,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const marker = Permanent_Marker({
+  variable: "--font-marker",
+  weight: "400",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "epuslar themes | OpenAnime Tema Portalı",
+  title: "epulsar themes | OpenAnime Tema Portalı",
   description: "OpenAnime için takım ve proje destekli tema paylaşım sitesi.",
 };
 
@@ -25,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${marker.variable} antialiased`}>
         <Header />
         <div className="min-h-screen bg-slate-950 text-slate-100">{children}</div>
       </body>
