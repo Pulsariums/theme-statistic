@@ -18,7 +18,7 @@ export default function Header() {
 
   useEffect(() => {
     const saved = typeof window !== "undefined"
-      ? window.localStorage.getItem("epulsarTheme") ?? window.localStorage.getItem("epuslarTheme")
+      ? window.localStorage.getItem("pulsarTheme") ?? window.localStorage.getItem("puslarTheme") ?? window.localStorage.getItem("epulsarTheme") ?? window.localStorage.getItem("epuslarTheme")
       : null;
     if (saved === "black" || saved === "blush") {
       setTheme(saved);
@@ -29,7 +29,7 @@ export default function Header() {
     if (typeof window === "undefined") return;
     document.body.classList.remove("theme-black", "theme-blush");
     document.body.classList.add(`theme-${theme}`);
-    window.localStorage.setItem("epulsarTheme", theme);
+    window.localStorage.setItem("pulsarTheme", theme);
   }, [theme]);
 
   const themeLabel = theme === "black" ? "Jet" : "Blush";
@@ -38,7 +38,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-slate-800/90 bg-slate-950/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-10">
         <Link href="/" className="font-marker text-lg text-white uppercase tracking-[0.22em] text-shadow leading-none brand-effect">
-          epulsar themes
+          Pulsar Themes
         </Link>
 
         <div className="flex flex-1 items-center justify-end gap-3 min-[420px]:justify-between">
@@ -59,25 +59,10 @@ export default function Header() {
           <div className="hidden items-center gap-2 md:flex">
             <button
               type="button"
-              onClick={() => setTheme("black")}
-              className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                theme === "black"
-                  ? "bg-cyan-400 text-slate-950"
-                  : "border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
-              }`}
+              onClick={() => setTheme(theme === "black" ? "blush" : "black")}
+              className="rounded-full px-4 py-2 text-sm font-medium bg-slate-900 text-slate-100 transition hover:bg-slate-800"
             >
-              Jet
-            </button>
-            <button
-              type="button"
-              onClick={() => setTheme("blush")}
-              className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                theme === "blush"
-                  ? "bg-fuchsia-400 text-slate-950"
-                  : "border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
-              }`}
-            >
-              Blush
+              {theme === "black" ? "Açık Tema" : "Koyu Tema"}
             </button>
           </div>
 
@@ -106,30 +91,13 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setTheme("black")}
-                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                  theme === "black"
-                    ? "bg-cyan-400 text-slate-950"
-                    : "border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
-                }`}
-              >
-                Jet
-              </button>
-              <button
-                type="button"
-                onClick={() => setTheme("blush")}
-                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                  theme === "blush"
-                    ? "bg-fuchsia-400 text-slate-950"
-                    : "border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
-                }`}
-              >
-                Blush
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setTheme(theme === "black" ? "blush" : "black")}
+              className="w-full rounded-2xl px-4 py-3 text-sm font-medium bg-slate-900 text-slate-100 transition hover:bg-slate-800"
+            >
+              {theme === "black" ? "Açık Tema" : "Koyu Tema"}
+            </button>
           </nav>
         </div>
       )}

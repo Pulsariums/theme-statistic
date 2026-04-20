@@ -20,7 +20,7 @@ const marker = Permanent_Marker({
 });
 
 export const metadata: Metadata = {
-  title: "epulsar themes | OpenAnime Tema Portalı",
+  title: "Pulsar Themes | OpenAnime Tema Portalı",
   description: "OpenAnime için takım ve proje destekli tema paylaşım sitesi.",
 };
 

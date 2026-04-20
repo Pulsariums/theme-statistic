@@ -1,50 +1,88 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const response = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const result = await response.json();
+    setLoading(false);
+
+    if (!response.ok) {
+      setError(result.error || "Giriş başarısız oldu.");
+      return;
+    }
+
+    router.push("/admin");
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-12 sm:px-10">
         <section className="rounded-[32px] border border-slate-800 bg-slate-900/95 p-10 shadow-[0_30px_60px_rgba(15,23,42,0.7)]">
           <div className="space-y-4">
-            <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Hesap Girişi</p>
-            <h1 className="text-4xl font-semibold text-white">Giriş Yap veya Hesap Beklet</h1>
+            <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Giriş</p>
+            <h1 className="text-4xl font-semibold text-white">Pulsar Themes Giriş</h1>
             <p className="max-w-2xl text-slate-400">
-              Veritabanı kurulduktan sonra bu form gerçek kullanıcı kimlik doğrulaması, hesap profilleri ve admin yetkisi için aktif hale gelecek.
+              Lütfen yönetici hesabınız veya kullanıcı bilgilerinizle giriş yapın. Sistem, Postgres veritabanı üzerinden doğrulama yapar.
             </p>
           </div>
 
-          <div className="mt-10 grid gap-6 sm:grid-cols-2">
-            <div className="rounded-3xl border border-slate-800 bg-slate-800/80 p-6">
-              <h2 className="text-xl font-semibold text-white">Standart Kullanıcı</h2>
-              <p className="mt-2 text-sm text-slate-400">Kullanıcı adı, e-posta ve profil bilgileri burada saklanacak.</p>
+          <form onSubmit={handleSubmit} className="mt-10 grid gap-6">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-slate-200">Kullanıcı Adı</label>
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400"
+                placeholder="admin"
+              />
             </div>
-            <div className="rounded-3xl border border-slate-800 bg-slate-800/80 p-6">
-              <h2 className="text-xl font-semibold text-white">Yönetici Hesabı</h2>
-              <p className="mt-2 text-sm text-slate-400">Varsayılan admin hesabı `admin` kullanıcı adıyla açılacak ve ayrı yetkiyle çalışacak.</p>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-slate-200">Şifre</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400"
+                placeholder="••••••••"
+              />
             </div>
-          </div>
-
-          <div className="mt-10 space-y-4">
-            <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-950/80 p-6 text-slate-300">
-              <p className="text-sm text-slate-400">Burada şu anda gerçek bir hesap/parola sistemi yok.</p>
-              <p className="text-sm text-slate-300">
-                Güvenlik önceliğiyle, hesap kimlik doğrulaması için yönetilen bir servis veya güçlü backend doğrulaması eklemeden önce bu alan kapalı kalacak.
-              </p>
-            </div>
+            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
             <button
-              type="button"
-              disabled
-              className="w-full rounded-3xl border border-slate-800 bg-slate-900/80 px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400 transition"
+              type="submit"
+              disabled={loading}
+              className="rounded-3xl bg-fuchsia-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-fuchsia-300 disabled:opacity-60"
             >
-              Güvenli Kimlik Doğrulama Bekleniyor
+              {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
             </button>
+          </form>
+
+          <div className="mt-8 rounded-3xl border border-slate-800 bg-slate-800/80 p-6 text-slate-300">
+            <p className="text-sm text-slate-400">
+              Yönetici hesabı, `admin` kullanıcısı ile yapılandırılacaktır. Lütfen bağlantı ayarlarını `DATABASE_URL`, `JWT_SECRET` ve `ADMIN_PASSWORD` ile sağlayın.
+            </p>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-            <p>Giriş yapıldığında kullanıcı profilleri ve hesap rolleri saklanacak.</p>
-            <Link href="/" className="inline-flex rounded-full bg-cyan-400 px-5 py-3 text-slate-950 transition hover:bg-cyan-300">
-              Ana Sayfaya Dön
-            </Link>
+          <div className="mt-8 text-sm text-slate-400">
+            <p>Henüz yeni hesap oluşturma desteği yok. Yalnızca mevcut kullanıcılarla giriş yapılabilir.</p>
           </div>
         </section>
       </div>

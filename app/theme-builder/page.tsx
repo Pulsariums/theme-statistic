@@ -8,7 +8,7 @@ const defaultOptions: ThemeBuilderOptions = {
   name: "OpenAnime Starter",
   slug: "openanime-starter",
   description: "OpenAnime uyumlu koyu tema üretiyor.",
-  logoText: "epulsar themes",
+  logoText: "Pulsar Themes",
   logoFont: "Permanent Marker",
   primaryColor: "#8b5cf6",
   accentColor: "#f472b6",

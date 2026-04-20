@@ -1,27 +1,56 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import TagPill from "@/app/components/tag-pill";
 import ThemeCard from "@/app/components/theme-card";
-import { themes, type ThemeTag } from "@/lib/themes";
+
+type ThemeItem = {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  author: string | null;
+  tags: string[] | null;
+  use_count: number;
+  release_date: string | null;
+  status: string;
+};
+
+type ThemeTag = "Mobile" | "PC" | "Anime" | "Dark" | "Light" | "Minimal" | "Neon";
 
 const availableTags: ThemeTag[] = ["Mobile", "PC", "Anime", "Dark", "Light", "Minimal", "Neon"];
 
 export default function BrowsePage() {
+  const [themes, setThemes] = useState<ThemeItem[]>([]);
   const [selectedTag, setSelectedTag] = useState<ThemeTag | "All">("All");
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch("/api/themes");
+        const data = await response.json();
+        setThemes(Array.isArray(data.themes) ? data.themes : []);
+      } catch {
+        setThemes([]);
+      }
+      setLoading(false);
+    };
+
+    load();
+  }, []);
 
   const visibleThemes = useMemo(() => {
     return themes
-      .filter((theme) => selectedTag === "All" || theme.tags.includes(selectedTag))
-      .filter(
-        (theme) =>
-          theme.name.toLowerCase().includes(query.toLowerCase()) ||
-          theme.description.toLowerCase().includes(query.toLowerCase()) ||
-          theme.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()))
-      );
-  }, [query, selectedTag]);
+      .filter((theme) => selectedTag === "All" || (theme.tags || []).includes(selectedTag))
+      .filter((theme) => {
+        const text = `${theme.name} ${theme.description || ""} ${(theme.tags || []).join(" ")}`.toLowerCase();
+        return text.includes(query.trim().toLowerCase());
+      });
+  }, [query, selectedTag, themes]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -31,7 +60,7 @@ export default function BrowsePage() {
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-fuchsia-300/90">Tema kataloğu</p>
               <h1 className="mt-4 text-3xl font-semibold text-white">Browse</h1>
-              <p className="mt-2 max-w-3xl text-slate-400">Arama butonuna gerek yok. Aşağıdan doğrudan tema adını veya etiketi yaz.</p>
+              <p className="mt-2 max-w-3xl text-slate-400">Aşağıdan doğrudan tema adı, açıklaması veya etiketi ile arayabilirsiniz.</p>
             </div>
             <Link href="/" className="inline-flex rounded-full bg-fuchsia-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-fuchsia-300">
               Ana Sayfaya Dön
@@ -56,12 +85,13 @@ export default function BrowsePage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2">
-          {visibleThemes.map((theme) => (
-            <ThemeCard key={theme.id} theme={theme} />
-          ))}
-          {visibleThemes.length === 0 && (
+          {loading ? (
+            <div className="rounded-[28px] border border-slate-800 bg-slate-900/95 p-8 text-slate-400">Temalar yükleniyor...</div>
+          ) : visibleThemes.length > 0 ? (
+            visibleThemes.map((theme) => <ThemeCard key={theme.id} theme={theme} />)
+          ) : (
             <div className="rounded-[28px] border border-slate-800 bg-slate-900/95 p-8 text-slate-400">
-              Arama kriterlerinize uygun tema bulunamadı.
+              Kayıtlı tema bulunmuyor ya da aramaya uygun tema mevcut değil.
             </div>
           )}
         </section>
