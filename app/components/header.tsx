@@ -7,14 +7,19 @@ import { useDevice } from "@/app/hooks/useDevice";
 const baseLinks = [
   { href: "/", label: "Ana Sayfa" },
   { href: "/browse", label: "Gözat" },
+  { href: "/teams", label: "Takımlar" },
   { href: "/gallery", label: "Galeri" },
 ];
 
-export default function Header() {
+type HeaderProps = {
+  initialUser: { username: string; role: string } | null;
+};
+
+export default function Header({ initialUser }: HeaderProps) {
   const device = useDevice();
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState<"black" | "blush">("black");
-  const [user, setUser] = useState<{ username: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ username: string; role: string } | null>(initialUser);
 
   useEffect(() => {
     const saved = typeof window !== "undefined"
@@ -31,24 +36,6 @@ export default function Header() {
     document.body.classList.add(`theme-${theme}`);
     window.localStorage.setItem("pulsarTheme", theme);
   }, [theme]);
-
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const response = await fetch("/api/auth", { cache: "no-store", credentials: "include" });
-        if (!response.ok) {
-          setUser(null);
-          return;
-        }
-        const payload = await response.json();
-        setUser(payload.user ?? null);
-      } catch {
-        setUser(null);
-      }
-    };
-
-    loadUser();
-  }, []);
 
   const handleLogout = async () => {
     try {

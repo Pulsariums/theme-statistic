@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Permanent_Marker } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import Header from "@/app/components/header";
+import { getCurrentUser } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,15 +29,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookiesStore = await cookies();
+  const cookieValue = cookiesStore.get("pulsar_session")?.value ?? null;
+  const initialUser = await getCurrentUser(cookieValue);
+
   return (
     <html lang="tr">
       <body className={`${geistSans.variable} ${geistMono.variable} ${marker.variable} antialiased bg-[var(--background)] text-[var(--text)] transition-colors duration-300`}>
-        <Header />
+        <Header initialUser={initialUser} />
         <div className="min-h-screen bg-[var(--background)] text-[var(--text)]">{children}</div>
       </body>
     </html>

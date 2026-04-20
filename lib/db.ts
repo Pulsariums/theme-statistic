@@ -99,6 +99,17 @@ export async function initDatabase() {
   await pool.query(`ALTER TABLE themes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;`);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS teams (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      member_ids INTEGER[] NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS theme_usage_daily (
       id SERIAL PRIMARY KEY,
       theme_id INTEGER REFERENCES themes(id) ON DELETE CASCADE,
@@ -213,6 +224,44 @@ export async function findUserByEmail(email: string) {
 export async function findUserById(id: number) {
   const rows = await query<UserRecord>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [id]);
   return rows[0] ?? null;
+}
+
+export type TeamRecord = {
+  id: number;
+  name: string;
+  description: string | null;
+  owner_id: number | null;
+  member_ids: number[];
+  created_at: string;
+};
+
+export async function createTeam(options: { name: string; description?: string; owner_id: number }) {
+  const rows = await query<TeamRecord>(
+    `INSERT INTO teams (name, description, owner_id, member_ids) VALUES ($1, $2, $3, $4) RETURNING id, name, description, owner_id, member_ids, created_at`,
+    [options.name, options.description || null, options.owner_id, [options.owner_id]]
+  );
+  return rows[0];
+}
+
+export async function findTeamsForUser(userId: number) {
+  const rows = await query<TeamRecord>(
+    `SELECT id, name, description, owner_id, member_ids, created_at FROM teams WHERE owner_id = $1 OR $2 = ANY(member_ids) ORDER BY created_at DESC`,
+    [userId, userId]
+  );
+  return rows;
+}
+
+export async function findTeamById(id: number) {
+  const rows = await query<TeamRecord>(`SELECT id, name, description, owner_id, member_ids, created_at FROM teams WHERE id = $1 LIMIT 1`, [id]);
+  return rows[0] ?? null;
+}
+
+export async function teamNameExists(name: string) {
+  const rows = await query<{ exists: boolean }>(
+    `SELECT EXISTS(SELECT 1 FROM teams WHERE name = $1) AS exists`,
+    [name]
+  );
+  return rows[0]?.exists ?? false;
 }
 
 export async function themeSlugExists(slug: string) {

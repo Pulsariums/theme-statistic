@@ -62,7 +62,11 @@ export async function getCurrentUser(request: Request | NextRequest | string | n
     return null;
   }
 
-  return await findUserById(payload.sub);
+  try {
+    return await findUserById(payload.sub);
+  } catch {
+    return null;
+  }
 }
 
 export const cookieOptions = {
