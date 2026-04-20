@@ -19,7 +19,8 @@ export default async function MyThemeEditPage({ params }: { params: { id: string
   }
 
   const theme = await getThemeById(themeId);
-  if (!theme || theme.owner_id !== user.id) {
+  const isOwner = theme && (theme.owner_id === user.id || (theme.owner_id === null && user.username && theme.author?.toLowerCase() === user.username.toLowerCase()));
+  if (!theme || !isOwner) {
     redirect("/my-themes");
   }
 

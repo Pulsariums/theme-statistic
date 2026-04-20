@@ -371,7 +371,7 @@ export async function getPublishedThemes() {
 
 export async function getThemeBySlug(slug: string) {
   const rows = await query<ThemeRecord>(
-    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE slug = $1 AND status = 'published' AND delete_requested_at IS NULL AND deleted_at IS NULL LIMIT 1`,
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE LOWER(slug) = LOWER($1) AND status = 'published' AND delete_requested_at IS NULL AND deleted_at IS NULL LIMIT 1`,
     [slug]
   );
   return rows[0] ?? null;
@@ -379,7 +379,7 @@ export async function getThemeBySlug(slug: string) {
 
 export async function getThemeBySlugIncludingPrivate(slug: string) {
   const rows = await query<ThemeRecord>(
-    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE slug = $1 AND deleted_at IS NULL LIMIT 1`,
+    `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE LOWER(slug) = LOWER($1) AND deleted_at IS NULL LIMIT 1`,
     [slug]
   );
   return rows[0] ?? null;
@@ -465,8 +465,14 @@ export async function getAllThemes() {
   );
 }
 
-export async function getUserThemes(userId: number) {
+export async function getUserThemes(userId: number, username?: string) {
   await cleanupPendingDeletes();
+  if (username) {
+    return query<ThemeRecord>(
+      `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE deleted_at IS NULL AND (owner_id = $1 OR (owner_id IS NULL AND LOWER(author) = LOWER($2))) ORDER BY updated_at DESC`,
+      [userId, username]
+    );
+  }
   return query<ThemeRecord>(
     `SELECT id, slug, name, description, author, tags, thumbnail_url, image_urls, css_code, moderation_reason, delete_requested_at, deleted_at, use_count, release_date, owner_id, status, created_at, updated_at FROM themes WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY updated_at DESC`,
     [userId]

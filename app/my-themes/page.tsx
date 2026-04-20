@@ -13,7 +13,7 @@ export default async function MyThemesPage() {
     redirect("/login");
   }
 
-  const themes = await getUserThemes(user.id);
+  const themes = await getUserThemes(user.id, user.username);
 
   const formatStatus = (status: string) => {
     switch (status) {

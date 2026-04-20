@@ -21,12 +21,13 @@ export default async function ThemeDetailPage({ params }: { params: { slug: stri
     if (!theme) {
       return notFound();
     }
-    if (!currentUser || (currentUser.role !== "admin" && currentUser.id !== theme.owner_id)) {
+    const isOwner = currentUser?.id === theme.owner_id || (theme.owner_id === null && currentUser?.username && theme.author?.toLowerCase() === currentUser.username.toLowerCase());
+    if (!currentUser || (currentUser.role !== "admin" && !isOwner)) {
       return notFound();
     }
   }
 
-  const canEdit = currentUser?.id === theme.owner_id || currentUser?.role === "admin";
+  const canEdit = currentUser?.role === "admin" || currentUser?.id === theme.owner_id || (theme.owner_id === null && currentUser?.username && theme.author?.toLowerCase() === currentUser.username.toLowerCase());
   const isPrivateView = theme.status !== "published";
   await recordThemeUsage(theme.id);
   const history = await getThemeUsageHistory(theme.id, 14);
