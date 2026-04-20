@@ -31,8 +31,28 @@ export function verifySessionToken(token: string) {
   }
 }
 
-export async function getCurrentUser(request: NextRequest) {
-  const cookie = request.cookies.get(COOKIE_NAME)?.value;
+function parseCookieHeader(request: Request | NextRequest | null) {
+  if (!request) {
+    return null;
+  }
+
+  if ("cookies" in request && typeof request.cookies?.get === "function") {
+    return request.cookies.get(COOKIE_NAME)?.value ?? null;
+  }
+
+  const header = request.headers.get("cookie") || "";
+  const cookies = header.split(";").map((item) => item.trim());
+  for (const cookie of cookies) {
+    const [name, ...rest] = cookie.split("=");
+    if (name === COOKIE_NAME) {
+      return rest.join("=");
+    }
+  }
+  return null;
+}
+
+export async function getCurrentUser(request: Request | NextRequest | string | null) {
+  const cookie = typeof request === "string" ? request : parseCookieHeader(request);
   if (!cookie) {
     return null;
   }
@@ -50,4 +70,5 @@ export const cookieOptions = {
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
   path: "/",
+  maxAge: 60 * 60 * 24 * 7,
 };

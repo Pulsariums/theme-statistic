@@ -11,9 +11,13 @@
   --accent-strong: #818cf8;
   --radius: 28px;
   --shadow: 0 30px 80px rgba(15, 23, 42, 0.45);
+  --card-bg: #111827;
+  --input-bg: #111827;
+  --input-text: #e2e8f0;
 }
 
 body.theme-black {
+  color-scheme: dark;
   --background: #020617;
   --surface: #09111f;
   --surface-strong: #0b1528;
@@ -22,17 +26,24 @@ body.theme-black {
   --muted: #94a3b8;
   --accent: #38bdf8;
   --accent-strong: #7c3aed;
+  --card-bg: #111827;
+  --input-bg: #111827;
+  --input-text: #e2e8f0;
 }
 
 body.theme-blush {
+  color-scheme: light;
   --background: #faf5ff;
   --surface: #ffffff;
   --surface-strong: #f4e7ff;
-  --border: rgba(168, 85, 247, 0.18);
+  --border: rgba(148, 163, 184, 0.25);
   --text: #111827;
-  --muted: #7c3aed;
+  --muted: #475569;
   --accent: #ec4899;
   --accent-strong: #f472b6;
+  --card-bg: #f8f8ff;
+  --input-bg: #f4f4f5;
+  --input-text: #111827;
 }
 
 @theme inline {

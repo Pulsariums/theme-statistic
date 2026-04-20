@@ -4,17 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useDevice } from "@/app/hooks/useDevice";
 
-const links = [
+const baseLinks = [
   { href: "/", label: "Ana Sayfa" },
   { href: "/browse", label: "Gözat" },
+  { href: "/gallery", label: "Galeri" },
   { href: "/theme-builder", label: "Tema Oluştur" },
-  { href: "/login", label: "Giriş" },
+  { href: "/theme-upload", label: "Tema Yükle" },
 ];
 
 export default function Header() {
   const device = useDevice();
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState<"black" | "blush">("black");
+  const [user, setUser] = useState<{ username: string; role: string } | null>(null);
 
   useEffect(() => {
     const saved = typeof window !== "undefined"
@@ -32,7 +34,51 @@ export default function Header() {
     window.localStorage.setItem("pulsarTheme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const response = await fetch("/api/auth", { cache: "no-store", credentials: "include" });
+        if (!response.ok) {
+          setUser(null);
+          return;
+        }
+        const payload = await response.json();
+        setUser(payload.user ?? null);
+      } catch {
+        setUser(null);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    setUser(null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
+  };
+
   const themeLabel = theme === "black" ? "Jet" : "Blush";
+  const authLinks = user
+    ? [
+        { href: "/my-themes", label: "Temalarım" },
+        { href: "/favorites", label: "Favoriler" },
+      ]
+    : [];
+
+  const navLinks = user
+    ? [
+        ...baseLinks,
+        ...authLinks,
+        ...(user.role === "admin" ? [{ href: "/admin", label: "Admin" }] : []),
+      ]
+    : [...baseLinks, { href: "/login", label: "Giriş" }];
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)]/90 bg-[var(--surface)]/95 backdrop-blur-xl">
@@ -44,11 +90,11 @@ export default function Header() {
         <div className="flex flex-1 items-center justify-end gap-3 min-[420px]:justify-between">
           {device !== "mobile" && (
             <nav className="hidden items-center gap-3 md:flex">
-              {links.map((link) => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-full px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white"
+                  className="rounded-full px-3 py-2 text-sm font-medium text-[var(--text)] transition hover:bg-[var(--surface-strong)] hover:text-[var(--text)]"
                 >
                   {link.label}
                 </Link>
@@ -57,20 +103,34 @@ export default function Header() {
           )}
 
           <div className="hidden items-center gap-2 md:flex">
+            {user ? (
+              <span className="rounded-full border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-2 text-sm text-[var(--text)]">
+                {user.username}
+              </span>
+            ) : null}
             <button
               type="button"
               onClick={() => setTheme(theme === "black" ? "blush" : "black")}
               className="rounded-full px-4 py-2 text-sm font-medium bg-[var(--surface-strong)] text-[var(--text)] transition hover:bg-[var(--surface)]"
             >
-              {theme === "black" ? "Açık Tema" : "Koyu Tema"}
+              {themeLabel}
             </button>
+            {user ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-full px-4 py-2 text-sm font-medium bg-[var(--accent)] text-[var(--text)] transition hover:bg-[var(--accent-strong)]"
+              >
+                Çıkış
+              </button>
+            ) : null}
           </div>
 
           {device === "mobile" ? (
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 transition hover:border-cyan-300/50 hover:text-cyan-300"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] text-[var(--text)] transition hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
             >
               <span className="text-2xl">☰</span>
             </button>
@@ -79,14 +139,14 @@ export default function Header() {
       </div>
 
       {menuOpen && device === "mobile" && (
-        <div className="border-t border-slate-800/90 bg-slate-950/95 px-6 pb-6 sm:px-10">
+        <div className="border-t border-[var(--border)]/90 bg-[var(--surface)]/95 px-6 pb-6 sm:px-10">
           <nav className="flex flex-col gap-2 pt-4">
-            {links.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-cyan-300 hover:text-cyan-200"
+                className="rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm font-medium text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
                 {link.label}
               </Link>
@@ -94,10 +154,19 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setTheme(theme === "black" ? "blush" : "black")}
-              className="w-full rounded-2xl px-4 py-3 text-sm font-medium bg-slate-900 text-slate-100 transition hover:bg-slate-800"
+              className="w-full rounded-2xl px-4 py-3 text-sm font-medium bg-[var(--surface-strong)] text-[var(--text)] transition hover:bg-[var(--surface)]"
             >
-              {theme === "black" ? "Açık Tema" : "Koyu Tema"}
+              {themeLabel}
             </button>
+            {user ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full rounded-2xl px-4 py-3 text-sm font-medium bg-[var(--accent)] text-[var(--text)] transition hover:bg-[var(--accent-strong)]"
+              >
+                Çıkış
+              </button>
+            ) : null}
           </nav>
         </div>
       )}

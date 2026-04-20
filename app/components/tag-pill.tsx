@@ -15,8 +15,8 @@ export default function TagPill({ tag, active = false, onClick }: Props) {
       onClick={onClick}
       className={`rounded-full border px-4 py-2 text-sm transition ${
         active
-          ? "border-cyan-300 bg-cyan-400/15 text-cyan-200"
-          : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500 hover:text-slate-100"
+          ? "border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--accent)]"
+          : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--text)] hover:text-[var(--text)]"
       }`}
     >
       {tag}
