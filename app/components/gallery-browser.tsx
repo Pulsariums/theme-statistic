@@ -24,7 +24,7 @@ const sortOptions = [
   { value: "name", label: "İsme Göre" },
 ];
 
-const uploadCategories = ["backgrounds", "logos", "stickers", "patterns"];
+const uploadCategories = ["backgrounds", "logos", "stickers", "patterns", "gif"];
 
 export default function GalleryBrowser({ initialAssets, isAdmin }: Props) {
   const [assets, setAssets] = useState(initialAssets);

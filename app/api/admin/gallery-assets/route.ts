@@ -71,7 +71,7 @@ function isFileLike(value: unknown): value is File {
   );
 }
 
-const allowedCategories = ["backgrounds", "logos", "stickers", "patterns"];
+const allowedCategories = ["backgrounds", "logos", "stickers", "patterns", "gif"];
 
 export async function POST(request: NextRequest) {
   await ensureDb();
@@ -80,54 +80,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 403 });
   }
 
-  const formData = await request.formData();
-  const rawCategory = String(formData.get("category") ?? "").trim().toLowerCase();
-  const label = String(formData.get("label") ?? "").trim();
-  const file = formData.get("file");
+  try {
+    const formData = await request.formData();
+    const rawCategory = String(formData.get("category") ?? "").trim().toLowerCase();
+    const label = String(formData.get("label") ?? "").trim();
+    const file = formData.get("file");
 
-  if (!rawCategory || !allowedCategories.includes(rawCategory) || !file || !isFileLike(file)) {
-    return NextResponse.json({ error: `Geçersiz kategori veya görsel dosyası. Kategori için şu seçeneklerden birini seçin: ${allowedCategories.join(", ")}` }, { status: 400 });
-  }
-
-  const extension = path.extname(file.name).toLowerCase();
-  if (!validExtensions.includes(extension)) {
-    return NextResponse.json({ error: "Geçersiz dosya formatı. Sadece png, jpg, jpeg, webp, gif veya svg kabul edilir." }, { status: 400 });
-  }
-
-  const category = sanitizeCategory(rawCategory);
-  const directory = path.join(galleryRoot, category);
-  await fs.mkdir(directory, { recursive: true });
-
-  const baseName = sanitizeFileName(path.basename(file.name, extension));
-  let fileName = `${baseName}${extension}`;
-  let filePath = path.join(directory, fileName);
-  let suffix = 1;
-  while (true) {
-    try {
-      await fs.access(filePath);
-      fileName = `${baseName}-${suffix++}${extension}`;
-      filePath = path.join(directory, fileName);
-    } catch {
-      break;
+    if (!rawCategory || !allowedCategories.includes(rawCategory) || !file || !isFileLike(file)) {
+      return NextResponse.json({ error: `Geçersiz kategori veya görsel dosyası. Kategori için şu seçeneklerden birini seçin: ${allowedCategories.join(", ")}` }, { status: 400 });
     }
+
+    const extension = path.extname((file as any).name || "").toLowerCase();
+    if (!validExtensions.includes(extension)) {
+      return NextResponse.json({ error: "Geçersiz dosya formatı. Sadece png, jpg, jpeg, webp, gif veya svg kabul edilir." }, { status: 400 });
+    }
+
+    const category = sanitizeCategory(rawCategory);
+    const directory = path.join(galleryRoot, category);
+    await fs.mkdir(directory, { recursive: true });
+
+    const baseName = sanitizeFileName(path.basename((file as any).name || `image-${Date.now()}`, extension));
+    let fileName = `${baseName}${extension}`;
+    let filePath = path.join(directory, fileName);
+    let suffix = 1;
+    while (true) {
+      try {
+        await fs.access(filePath);
+        fileName = `${baseName}-${suffix++}${extension}`;
+        filePath = path.join(directory, fileName);
+      } catch {
+        break;
+      }
+    }
+
+    const buffer = Buffer.from(await (file as any).arrayBuffer());
+    await fs.writeFile(filePath, buffer);
+
+    const imagePath = path.posix.join("images", category, fileName);
+    const url = `/${imagePath}`;
+    const assetLabel = label || path.basename(baseName).replace(/[-_]/g, " ");
+
+    return NextResponse.json({
+      asset: {
+        category,
+        fileName,
+        url,
+        label: assetLabel,
+        imagePath,
+        views: 0,
+        downloads: 0,
+      },
+    });
+  } catch (error) {
+    console.error("Gallery asset upload failed", error);
+    return NextResponse.json({ error: "Sunucuda görsel yükleme sırasında hata oluştu." }, { status: 500 });
   }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(filePath, buffer);
-
-  const imagePath = path.posix.join("images", category, fileName);
-  const url = `/${imagePath}`;
-  const assetLabel = label || path.basename(baseName).replace(/[-_]/g, " ");
-
-  return NextResponse.json({
-    asset: {
-      category,
-      fileName,
-      url,
-      label: assetLabel,
-      imagePath,
-      views: 0,
-      downloads: 0,
-    },
-  });
 }

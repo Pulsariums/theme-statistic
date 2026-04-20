@@ -50,7 +50,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const galleryCategories = ["backgrounds", "logos", "stickers", "patterns"];
+  const galleryCategories = ["backgrounds", "logos", "stickers", "patterns", "gif"];
 
   useEffect(() => {
     const load = async () => {
