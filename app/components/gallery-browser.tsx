@@ -24,6 +24,8 @@ const sortOptions = [
   { value: "name", label: "İsme Göre" },
 ];
 
+const uploadCategories = ["backgrounds", "logos", "stickers", "patterns"];
+
 export default function GalleryBrowser({ initialAssets, isAdmin }: Props) {
   const [assets, setAssets] = useState(initialAssets);
   const [query, setQuery] = useState("");
@@ -137,12 +139,18 @@ export default function GalleryBrowser({ initialAssets, isAdmin }: Props) {
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <label className="space-y-2 text-sm text-[var(--text)]">
               <span>Kategori</span>
-              <input
+              <select
                 value={uploadCategory}
                 onChange={(event) => setUploadCategory(event.target.value)}
-                placeholder="backgrounds"
                 className="w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--input-text)] outline-none transition focus:border-[var(--accent)]"
-              />
+              >
+                <option value="">Kategori seçin</option>
+                {uploadCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="space-y-2 text-sm text-[var(--text)]">
               <span>Etiket / Başlık</span>

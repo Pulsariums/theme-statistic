@@ -50,6 +50,8 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const galleryCategories = ["backgrounds", "logos", "stickers", "patterns"];
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -396,12 +398,18 @@ export default function AdminPage() {
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <label className="space-y-2 text-sm text-[var(--text)]">
                     <span>Kategori</span>
-                    <input
+                    <select
                       value={galleryCategory}
                       onChange={(event) => setGalleryCategory(event.target.value)}
-                      placeholder="ör. backgrounds"
                       className="w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--input-text)] outline-none transition focus:border-[var(--accent)]"
-                    />
+                    >
+                      <option value="">Kategori seçin</option>
+                      {galleryCategories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   <label className="space-y-2 text-sm text-[var(--text)]">

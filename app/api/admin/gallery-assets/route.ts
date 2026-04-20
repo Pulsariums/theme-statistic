@@ -62,6 +62,17 @@ function sanitizeFileName(value: string) {
     .replace(/^-+|-+$/g, "") || `image-${Date.now()}`;
 }
 
+function isFileLike(value: unknown): value is File {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as any).name === "string" &&
+    typeof (value as any).arrayBuffer === "function"
+  );
+}
+
+const allowedCategories = ["backgrounds", "logos", "stickers", "patterns"];
+
 export async function POST(request: NextRequest) {
   await ensureDb();
   const currentUser = await getCurrentUser(request);
@@ -70,12 +81,12 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData();
-  const rawCategory = String(formData.get("category") ?? "").trim();
+  const rawCategory = String(formData.get("category") ?? "").trim().toLowerCase();
   const label = String(formData.get("label") ?? "").trim();
   const file = formData.get("file");
 
-  if (!rawCategory || !file || !(file instanceof File)) {
-    return NextResponse.json({ error: "Kategori ve görsel dosyası gereklidir." }, { status: 400 });
+  if (!rawCategory || !allowedCategories.includes(rawCategory) || !file || !isFileLike(file)) {
+    return NextResponse.json({ error: `Geçersiz kategori veya görsel dosyası. Kategori için şu seçeneklerden birini seçin: ${allowedCategories.join(", ")}` }, { status: 400 });
   }
 
   const extension = path.extname(file.name).toLowerCase();
