@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pulsar Themes | OpenAnime Tema Portalı",
+  title: "epuslar themes | OpenAnime Tema Portalı",
   description: "OpenAnime için takım ve proje destekli tema paylaşım sitesi.",
 };
 
